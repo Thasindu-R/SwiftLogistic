@@ -1,0 +1,217 @@
+services:
+  # ───────────────────────────────────────────────────────────
+  # Infrastructure
+  # ───────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: swifttrack-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - swifttrack-net
+
+  postgres:
+    image: postgres:16
+    container_name: swifttrack-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-swifttrack}
+      POSTGRES_USER: ${POSTGRES_USER:-swifttrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swifttrack}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-swifttrack} -d ${POSTGRES_DB:-swifttrack}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - swifttrack-net
+
+  # ───────────────────────────────────────────────────────────
+  # Core Microservices
+  # ───────────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: swifttrack-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      SERVICE_NAME: api-gateway
+      PORT: 8000
+      AUTH_SERVICE_URL: http://auth-service:8002
+      ORDER_SERVICE_URL: http://order-service:8001
+      TRACKING_SERVICE_URL: http://tracking-service:8003
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-swifttrack}:${POSTGRES_PASSWORD:-swifttrack}@postgres:5432/${POSTGRES_DB:-swifttrack}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      tracking-service:
+        condition: service_started
+    networks:
+      - swifttrack-net
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: swifttrack-auth-service
+    ports:
+      - "8002:8002"
+    environment:
+      SERVICE_NAME: auth-service
+      PORT: 8002
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-swifttrack}:${POSTGRES_PASSWORD:-swifttrack}@postgres:5432/${POSTGRES_DB:-swifttrack}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    container_name: swifttrack-order-service
+    ports:
+      - "8001:8001"
+    environment:
+      SERVICE_NAME: order-service
+      PORT: 8001
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-swifttrack}:${POSTGRES_PASSWORD:-swifttrack}@postgres:5432/${POSTGRES_DB:-swifttrack}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  tracking-service:
+    build:
+      context: .
+      dockerfile: services/tracking-service/Dockerfile
+    container_name: swifttrack-tracking-service
+    ports:
+      - "8003:8003"
+    environment:
+      SERVICE_NAME: tracking-service
+      PORT: 8003
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-swifttrack}:${POSTGRES_PASSWORD:-swifttrack}@postgres:5432/${POSTGRES_DB:-swifttrack}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  # ───────────────────────────────────────────────────────────
+  # Mock External Systems
+  # ───────────────────────────────────────────────────────────
+  mock-cms:
+    build:
+      context: .
+      dockerfile: services/mock-cms/Dockerfile
+    container_name: swifttrack-mock-cms
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: 8004
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  mock-ros:
+    build:
+      context: .
+      dockerfile: services/mock-ros/Dockerfile
+    container_name: swifttrack-mock-ros
+    ports:
+      - "8005:8005"
+    environment:
+      PORT: 8005
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  mock-wms:
+    build:
+      context: .
+      dockerfile: services/mock-wms/Dockerfile
+    container_name: swifttrack-mock-wms
+    ports:
+      - "8006:8006"
+      - "9000:9000"
+    environment:
+      PORT: 8006
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - swifttrack-net
+
+  # ───────────────────────────────────────────────────────────
+  # Frontend
+  # ───────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: swifttrack-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - swifttrack-net
+
+networks:
+  swifttrack-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

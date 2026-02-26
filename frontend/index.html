@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwiftTrack – Logistics Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- ── Auth Section ───────────────────────────────────── -->
+    <div id="auth-section" class="auth-wrapper">
+      <div class="auth-left">
+        <div class="auth-brand">
+          <div class="auth-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="12" fill="#06b6d4" />
+              <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.7" />
+              <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
+              <circle cx="18" cy="34" r="2.5" fill="#fff" />
+              <circle cx="32" cy="34" r="2.5" fill="#fff" />
+            </svg>
+          </div>
+          <h1>SwiftTrack</h1>
+          <p>Logistics Management Platform</p>
+        </div>
+        <div class="auth-features">
+          <div class="auth-feature">
+            <span class="auth-feature-icon">📦</span>
+            <div>
+              <strong>Order Management</strong>
+              <span>Create, track and manage all shipments</span>
+            </div>
+          </div>
+          <div class="auth-feature">
+            <span class="auth-feature-icon">🔄</span>
+            <div>
+              <strong>Real-time Tracking</strong>
+              <span>Live WebSocket updates on deliveries</span>
+            </div>
+          </div>
+          <div class="auth-feature">
+            <span class="auth-feature-icon">🔗</span>
+            <div>
+              <strong>System Integration</strong>
+              <span>CMS, ROS &amp; WMS middleware connectivity</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="auth-right">
+        <div class="card auth-card">
+          <!-- Login Form -->
+          <div id="login-form">
+            <h2>Welcome back</h2>
+            <p class="subtitle">Sign in to your account</p>
+            <div class="form-group">
+              <label for="login-username">Username</label>
+              <input
+                type="text"
+                id="login-username"
+                placeholder="Enter your username"
+              />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input
+                type="password"
+                id="login-password"
+                placeholder="Enter your password"
+              />
+            </div>
+            <button onclick="login()" class="btn-primary">Sign In</button>
+            <p class="link" onclick="showRegister()">
+              Don't have an account? <strong>Register as Client</strong>
+            </p>
+          </div>
+
+          <!-- Register Form -->
+          <div id="register-form" style="display: none">
+            <h2>Create account</h2>
+            <p class="subtitle">Register as a new client</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reg-username">Username</label>
+                <input
+                  type="text"
+                  id="reg-username"
+                  placeholder="Choose a username"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-email">Email</label>
+                <input
+                  type="email"
+                  id="reg-email"
+                  placeholder="name@example.com"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reg-fullname">Full Name</label>
+                <input
+                  type="text"
+                  id="reg-fullname"
+                  placeholder="Your full name"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-phone">Phone</label>
+                <input
+                  type="text"
+                  id="reg-phone"
+                  placeholder="+94 77 123 4567"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="reg-password">Password</label>
+              <input
+                type="password"
+                id="reg-password"
+                placeholder="Create a password"
+              />
+            </div>
+            <button onclick="register()" class="btn-primary">
+              Create Account
+            </button>
+            <p class="link" onclick="showLogin()">
+              Already have an account? <strong>Sign in</strong>
+            </p>
+          </div>
+          <div id="auth-error" class="error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main Dashboard ─────────────────────────────────── -->
+    <div id="dashboard-section" class="dashboard-layout" style="display: none">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+            <rect width="48" height="48" rx="12" fill="#06b6d4" />
+            <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.7" />
+            <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
+            <circle cx="18" cy="34" r="2.5" fill="#fff" />
+            <circle cx="32" cy="34" r="2.5" fill="#fff" />
+          </svg>
+          <span>SwiftTrack</span>
+        </div>
+        <nav class="sidebar-nav" id="nav-tabs"></nav>
+        <div class="sidebar-footer">
+          <div class="sidebar-user">
+            <div class="avatar" id="user-avatar">A</div>
+            <div class="sidebar-user-info">
+              <span id="user-info" class="sidebar-user-name"></span>
+              <span class="sidebar-user-role" id="user-role-badge"></span>
+            </div>
+          </div>
+          <button
+            onclick="logout()"
+            class="btn-sidebar-logout"
+            title="Sign out"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Mobile Header -->
+      <div class="mobile-header" id="mobile-header">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <span class="mobile-brand">SwiftTrack</span>
+      </div>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+          <div class="topbar-left">
+            <h1 id="page-title">Dashboard</h1>
+          </div>
+          <div class="header-right">
+            <button
+              class="btn-small btn-outline"
+              onclick="switchTab('profile')"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              Profile
+            </button>
+            <button onclick="logout()" class="btn-small btn-danger">
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <!-- Content wrapper for all tabs -->
+        <div class="content-area">
+          <!-- ══════════════════════════════════════════════════ -->
+          <!-- ADMIN: Dashboard Stats -->
+          <div
+            id="admin-dashboard-tab"
+            class="tab-content"
+            style="display: none"
+          >
+            <!-- Greeting Banner -->
+            <div class="dash-greeting" id="dash-greeting-banner">
+              <div class="dash-greeting-left">
+                <h2 id="dash-greeting-msg">Welcome back!</h2>
+                <p id="dash-greeting-sub">
+                  Here's what's happening with your logistics today.
+                </p>
+              </div>
+              <div class="dash-greeting-right">
+                <div class="dash-greeting-time" id="dash-clock"></div>
+                <div class="dash-greeting-date" id="dash-date"></div>
+              </div>
+            </div>
+            <div id="stats-cards" class="stats-grid"></div>
+            <div class="section-row">
+              <div class="section-half">
+                <div class="section-half-header">
+                  <h3>Recent Orders</h3>
+                </div>
+                <div id="admin-recent-orders"></div>
+              </div>
+              <div class="section-half">
+                <div class="section-half-header">
+                  <h3>Recent Events</h3>
+                </div>
+                <div id="admin-recent-events"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADMIN: User Management -->
+          <div id="users-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>User Management</h2>
+              <button
+                class="btn-small btn-success"
+                onclick="showModal('create-user-modal')"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create User
+              </button>
+            </div>
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>Role</label>
+                <select id="user-role-filter" onchange="loadUsers()">
+                  <option value="">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="client">Client</option>
+                  <option value="driver">Driver</option>
+                </select>
+              </div>
+              <div class="filter-group filter-search">
+                <label>Search</label>
+                <div class="search-input-wrap">
+                  <svg
+                    class="search-icon"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    id="user-search"
+                    placeholder="Search users..."
+                    onkeyup="debounce(loadUsers, 400)()"
+                  />
+                </div>
+              </div>
+            </div>
+            <div id="users-list" class="table-container"></div>
+          </div>
+
+          <!-- ADMIN: All Orders -->
+          <div id="all-orders-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>All Orders</h2>
+            </div>
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>Status</label>
+                <select
+                  id="admin-order-status-filter"
+                  onchange="loadAllOrders()"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="processing">Processing</option>
+                  <option value="in_transit">In Transit</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Priority</label>
+                <select
+                  id="admin-order-priority-filter"
+                  onchange="loadAllOrders()"
+                >
+                  <option value="">All Priorities</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div id="all-orders-list" class="orders-grid"></div>
+            <div class="pagination" id="all-orders-pagination"></div>
+          </div>
+
+          <!-- ADMIN: Integration Events -->
+          <div id="integration-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Integration Events Monitor</h2>
+            </div>
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>Status</label>
+                <select
+                  id="int-status-filter"
+                  onchange="loadIntegrationEvents()"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="success">Success</option>
+                  <option value="failed">Failed</option>
+                  <option value="retrying">Retrying</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Source</label>
+                <select
+                  id="int-source-filter"
+                  onchange="loadIntegrationEvents()"
+                >
+                  <option value="">All Sources</option>
+                  <option value="CMS">CMS (SOAP/XML)</option>
+                  <option value="ROS">ROS (REST/JSON)</option>
+                  <option value="WMS">WMS (TCP/IP)</option>
+                </select>
+              </div>
+            </div>
+            <div id="integration-events-list" class="table-container"></div>
+          </div>
+
+          <!-- ADMIN: Manifests -->
+          <div id="manifests-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Delivery Manifests</h2>
+              <button
+                class="btn-small btn-success"
+                onclick="showModal('create-manifest-modal')"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create Manifest
+              </button>
+            </div>
+            <div id="all-manifests-list"></div>
+          </div>
+
+          <!-- ══════════════════════════════════════════════════ -->
+          <!-- CLIENT: My Orders -->
+          <div id="orders-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>My Orders</h2>
+              <button class="btn-small btn-outline" onclick="loadOrders()">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <div id="orders-list" class="orders-grid"></div>
+          </div>
+
+          <!-- CLIENT / ADMIN: New Order -->
+          <div id="new-order-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Submit New Order</h2>
+            </div>
+            <div class="card form-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Pickup Address <span class="required">*</span></label>
+                  <input
+                    type="text"
+                    id="order-pickup"
+                    placeholder="123 Main St, Colombo 01"
+                    required
+                    minlength="5"
+                  />
+                </div>
+                <div class="form-group">
+                  <label
+                    >Delivery Address <span class="required">*</span></label
+                  >
+                  <input
+                    type="text"
+                    id="order-delivery"
+                    placeholder="456 Oak Ave, Kandy"
+                    required
+                    minlength="5"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Package Description</label>
+                  <input
+                    type="text"
+                    id="order-desc"
+                    placeholder="Electronics, fragile..."
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Weight (kg) <span class="required">*</span></label>
+                  <input
+                    type="number"
+                    id="order-weight"
+                    placeholder="1.0"
+                    step="0.1"
+                    min="0.1"
+                    value="1.0"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Recipient Name <span class="required">*</span></label>
+                  <input
+                    type="text"
+                    id="order-recipient"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Recipient Phone <span class="required">*</span></label>
+                  <input
+                    type="tel"
+                    id="order-phone"
+                    placeholder="+94771234567"
+                    required
+                    minlength="9"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Priority</label>
+                  <select id="order-priority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Notes (optional)</label>
+                  <input
+                    type="text"
+                    id="order-notes"
+                    placeholder="Handle with care..."
+                  />
+                </div>
+              </div>
+              <button
+                onclick="submitOrder()"
+                class="btn-primary"
+                style="margin-top: 16px"
+              >
+                Submit Order
+              </button>
+              <div id="order-result"></div>
+            </div>
+          </div>
+
+          <!-- TRACKING: Any role -->
+          <div id="tracking-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Track Order</h2>
+            </div>
+            <div class="track-input">
+              <input
+                type="text"
+                id="track-order-id"
+                placeholder="Enter Order ID (UUID)"
+              />
+              <button onclick="trackOrder()" class="btn-primary">Track</button>
+            </div>
+            <div id="tracking-result"></div>
+            <div id="ws-status" class="ws-badge disconnected">
+              &#9679; Disconnected
+            </div>
+            <div id="live-updates"></div>
+          </div>
+
+          <!-- DRIVER: My Manifests -->
+          <div id="driver-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>My Deliveries</h2>
+              <button onclick="loadManifests()" class="btn-small btn-outline">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <div id="driver-manifests"></div>
+          </div>
+
+          <!-- DRIVER: Assigned Orders -->
+          <div id="driver-orders-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Assigned Orders</h2>
+              <button
+                onclick="loadDriverOrders()"
+                class="btn-small btn-outline"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <div id="driver-orders-list" class="orders-grid"></div>
+          </div>
+
+          <!-- PROFILE: Any role -->
+          <div id="profile-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>My Profile</h2>
+            </div>
+            <div class="card form-card" style="max-width: 560px">
+              <h3 class="form-section-title">Personal Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Full Name</label>
+                  <input type="text" id="profile-fullname" />
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="profile-email" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="text" id="profile-phone" />
+                </div>
+                <div class="form-group">
+                  <label>Username</label>
+                  <input type="text" id="profile-username" disabled />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Role</label>
+                <input type="text" id="profile-role" disabled />
+              </div>
+              <button onclick="updateProfile()" class="btn-primary">
+                Save Changes
+              </button>
+              <div id="profile-result"></div>
+              <hr />
+              <h3 class="form-section-title">Change Password</h3>
+              <div class="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  id="pw-current"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>New Password</label>
+                  <input
+                    type="password"
+                    id="pw-new"
+                    placeholder="New password"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Confirm New Password</label>
+                  <input
+                    type="password"
+                    id="pw-confirm"
+                    placeholder="Confirm password"
+                  />
+                </div>
+              </div>
+              <button onclick="changePassword()" class="btn-primary">
+                Change Password
+              </button>
+              <div id="password-result"></div>
+            </div>
+          </div>
+        </div>
+        <!-- /.content-area -->
+      </main>
+    </div>
+
+    <!-- ══════════════ MODALS ══════════════════════════════ -->
+    <!-- Create User Modal -->
+    <div class="modal-overlay" id="create-user-modal" style="display: none">
+      <div class="modal card">
+        <div class="modal-header">
+          <h2>Create User</h2>
+          <button class="modal-close" onclick="hideModal('create-user-modal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="cu-username" placeholder="Enter username" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="cu-email" placeholder="user@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="cu-fullname" placeholder="Full name" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="cu-phone" placeholder="+94 77 123 4567" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              id="cu-password"
+              placeholder="Set password"
+            />
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select id="cu-role">
+              <option value="client">Client</option>
+              <option value="driver">Driver</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button onclick="createUser()" class="btn-primary">
+            Create User
+          </button>
+          <div id="cu-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="edit-user-modal" style="display: none">
+      <div class="modal card">
+        <div class="modal-header">
+          <h2>Edit User</h2>
+          <button class="modal-close" onclick="hideModal('edit-user-modal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="eu-id" />
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="eu-fullname" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="eu-email" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="eu-phone" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Role</label>
+              <select id="eu-role">
+                <option value="client">Client</option>
+                <option value="driver">Driver</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="eu-active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="updateUser()" class="btn-primary">
+            Save Changes
+          </button>
+          <div id="eu-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Driver Modal -->
+    <div class="modal-overlay" id="assign-driver-modal" style="display: none">
+      <div class="modal card">
+        <div class="modal-header">
+          <h2>Assign Driver</h2>
+          <button
+            class="modal-close"
+            onclick="hideModal('assign-driver-modal')"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="ad-order-id" />
+          <p id="ad-order-info" class="modal-info-text"></p>
+          <div class="form-group">
+            <label>Driver</label>
+            <select id="ad-driver-select"></select>
+          </div>
+          <button onclick="assignDriver()" class="btn-primary">
+            Assign Driver
+          </button>
+          <div id="ad-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Manifest Modal -->
+    <div class="modal-overlay" id="create-manifest-modal" style="display: none">
+      <div class="modal card">
+        <div class="modal-header">
+          <h2>Create Manifest</h2>
+          <button
+            class="modal-close"
+            onclick="hideModal('create-manifest-modal')"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Driver</label>
+              <select id="cm-driver-select"></select>
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="cm-date" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Order IDs (one per line)</label>
+            <textarea
+              id="cm-orders"
+              rows="4"
+              placeholder="order-uuid-1&#10;order-uuid-2"
+            ></textarea>
+          </div>
+          <button onclick="createManifest()" class="btn-primary">
+            Create Manifest
+          </button>
+          <div id="cm-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delivery Update Modal -->
+    <div class="modal-overlay" id="delivery-update-modal" style="display: none">
+      <div class="modal card">
+        <div class="modal-header">
+          <h2>Update Delivery</h2>
+          <button
+            class="modal-close"
+            onclick="hideModal('delivery-update-modal')"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="du-order-id" />
+          <div class="form-group">
+            <label>Status</label>
+            <select id="du-status">
+              <option value="in_transit">In Transit</option>
+              <option value="delivered">Delivered</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Proof of Delivery (text/URL)</label>
+            <input
+              type="text"
+              id="du-proof"
+              placeholder="Photo URL or description"
+            />
+          </div>
+          <div class="form-group">
+            <label>Signature</label>
+            <input
+              type="text"
+              id="du-signature"
+              placeholder="Recipient signature/name"
+            />
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input
+              type="text"
+              id="du-notes"
+              placeholder="Additional notes..."
+            />
+          </div>
+          <div class="form-group">
+            <label>Failure Reason (if failed)</label>
+            <input
+              type="text"
+              id="du-failure"
+              placeholder="Reason for failure..."
+            />
+          </div>
+          <button onclick="submitDeliveryUpdate()" class="btn-primary">
+            Update Delivery
+          </button>
+          <div id="du-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="order-detail-modal" style="display: none">
+      <div class="modal card modal-lg">
+        <div class="modal-header">
+          <h2>Order Details</h2>
+          <button class="modal-close" onclick="hideModal('order-detail-modal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body" id="order-detail-content"></div>
+      </div>
+    </div>
+
+    <!-- Sidebar overlay for mobile -->
+    <div
+      class="sidebar-overlay"
+      id="sidebar-overlay"
+      onclick="toggleSidebar()"
+    ></div>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
