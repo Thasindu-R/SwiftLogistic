@@ -144,6 +144,15 @@ function showDashboard() {
     )
       .charAt(0)
       .toUpperCase();
+
+  // Mount React dashboard shells (if present) before running any tab loaders.
+  // This preserves the element IDs that the existing DOM-based loaders expect.
+  try {
+    if (window.mountDashboards) window.mountDashboards();
+  } catch (e) {
+    console.warn("React dashboards failed to mount", e);
+  }
+
   buildTabs();
 }
 
@@ -406,6 +415,294 @@ async function loadAdminDashboard() {
       : "<p style='color:#999'>No events yet</p>";
   } catch (e) {
     $("admin-recent-events").innerHTML = `<p class="error">${e.message}</p>`;
+  }
+
+  // Load system status and integration status
+  await loadSystemStatus();
+  await loadIntegrationStatus();
+  await loadFailedMessages();
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: SYSTEM STATUS                                     */
+/* ══════════════════════════════════════════════════════════ */
+async function loadSystemStatus() {
+  const container = $("system-status-grid");
+  if (!container) return;
+
+  try {
+    const data = await api("GET", "/api/orders/admin/system-status");
+
+    // Render alerts first
+    renderAlerts(data);
+
+    // System status items
+    const statusItems = [
+      {
+        name: "Overall System",
+        status: data.overall_health || "unknown",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+      },
+      {
+        name: "Database",
+        status: data.database_health || "unknown",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+      },
+      {
+        name: "Message Queue",
+        status: data.queue_health || "unknown",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>',
+      },
+      {
+        name: "DLQ Messages",
+        status: data.dlq_messages > 0 ? "warning" : "healthy",
+        value: data.dlq_messages || 0,
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      },
+      {
+        name: "Active Sagas",
+        status: data.active_sagas > 5 ? "warning" : "healthy",
+        value: data.active_sagas || 0,
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
+      },
+    ];
+
+    container.innerHTML = statusItems
+      .map((item) => {
+        const statusClass =
+          item.status === "warning" ? "degraded" : item.status;
+        return `
+        <div class="system-status-item">
+          <div class="system-status-icon ${statusClass}">${item.icon}</div>
+          <div class="system-status-info">
+            <div class="system-status-name">${item.name}</div>
+            <div class="system-status-value ${statusClass}">
+              ${item.value !== undefined ? item.value : item.status.replace("_", " ")}
+            </div>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+  } catch (e) {
+    container.innerHTML = `<div class="no-data-message"><p>${e.message}</p></div>`;
+  }
+}
+
+function renderAlerts(data) {
+  const alertsContainer = $("dash-alerts");
+  if (!alertsContainer) return;
+
+  const alerts = [];
+
+  // Check for critical conditions
+  if (data.overall_health === "unhealthy") {
+    alerts.push({
+      type: "critical",
+      title: "System Health Critical",
+      message: "One or more critical systems are down",
+      action: "Check system status",
+    });
+  } else if (data.overall_health === "degraded") {
+    alerts.push({
+      type: "warning",
+      title: "System Health Degraded",
+      message: "Some systems are experiencing issues",
+      action: "Monitor closely",
+    });
+  }
+
+  if (data.dlq_messages > 10) {
+    alerts.push({
+      type: "warning",
+      title: "Dead Letter Queue Alert",
+      message: `${data.dlq_messages} messages in DLQ requiring attention`,
+      action: "Review DLQ",
+    });
+  }
+
+  if (data.active_sagas > 10) {
+    alerts.push({
+      type: "info",
+      title: "High Active Transactions",
+      message: `${data.active_sagas} transactions in progress`,
+      action: "Monitor sagas",
+    });
+  }
+
+  if (alerts.length === 0) {
+    alertsContainer.style.display = "none";
+    return;
+  }
+
+  alertsContainer.style.display = "block";
+  alertsContainer.innerHTML = alerts
+    .map(
+      (alert) => `
+    <div class="dash-alert ${alert.type}">
+      <div class="dash-alert-icon">
+        ${
+          alert.type === "critical"
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+            : alert.type === "error"
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+              : alert.type === "warning"
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+        }
+      </div>
+      <div class="dash-alert-content">
+        <div class="dash-alert-title">${alert.title}</div>
+        <div class="dash-alert-message">${alert.message}</div>
+      </div>
+      <div class="dash-alert-action">${alert.action}</div>
+    </div>
+  `,
+    )
+    .join("");
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: INTEGRATION STATUS                                */
+/* ══════════════════════════════════════════════════════════ */
+async function loadIntegrationStatus() {
+  const container = $("integration-status-cards");
+  if (!container) return;
+
+  try {
+    const data = await api("GET", "/api/orders/admin/integration-status");
+    const integrations = data.integrations || {};
+
+    const systemLabels = {
+      cms: { name: "CMS", desc: "Client Management System (SOAP/XML)" },
+      ros: { name: "ROS", desc: "Route Optimization System (REST/JSON)" },
+      wms: { name: "WMS", desc: "Warehouse Management System (TCP/IP)" },
+    };
+
+    container.innerHTML =
+      Object.entries(integrations)
+        .map(([key, info]) => {
+          const label = systemLabels[key] || {
+            name: key.toUpperCase(),
+            desc: key,
+          };
+          return `
+        <div class="integration-card">
+          <div class="integration-card-header">
+            <h4>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              ${label.name}
+            </h4>
+            <span class="integration-badge ${info.status}">${info.status}</span>
+          </div>
+          <div class="integration-stats">
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.response_time_ms || "-"}</div>
+              <div class="integration-stat-label">Response (ms)</div>
+            </div>
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.success_rate_24h ? info.success_rate_24h.toFixed(1) + "%" : "-"}</div>
+              <div class="integration-stat-label">Success Rate</div>
+            </div>
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.total_calls_24h || 0}</div>
+              <div class="integration-stat-label">Calls (24h)</div>
+            </div>
+          </div>
+          ${info.error_message ? `<div class="integration-error">${info.error_message}</div>` : ""}
+          <div class="integration-card-footer">
+            <span>${label.desc}</span>
+            <span>${info.last_check ? "Checked: " + fmtDate(info.last_check) : ""}</span>
+          </div>
+        </div>
+      `;
+        })
+        .join("") ||
+      '<div class="no-data-message">No integration data available</div>';
+  } catch (e) {
+    container.innerHTML = `<div class="no-data-message"><p>${e.message}</p></div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: FAILED MESSAGES                                   */
+/* ══════════════════════════════════════════════════════════ */
+async function loadFailedMessages() {
+  const container = $("failed-messages-list");
+  const countBadge = $("failed-msg-count");
+  if (!container) return;
+
+  try {
+    const data = await api("GET", "/api/orders/admin/failed-messages?limit=10");
+    const messages = data.messages || [];
+
+    if (countBadge) {
+      countBadge.textContent = data.count || 0;
+      countBadge.style.display = data.count > 0 ? "inline" : "none";
+    }
+
+    if (!messages.length) {
+      container.innerHTML = `
+        <div class="no-data-message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <p>No failed messages - all systems operating normally</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = messages
+      .map(
+        (msg) => `
+      <div class="failed-message-item" data-event-id="${msg.event_id}">
+        <div class="failed-message-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="failed-message-content">
+          <div class="failed-message-type">${msg.event_type || "Unknown Event"}</div>
+          <div class="failed-message-meta">
+            <span>Target: <strong>${msg.target_system}</strong></span>
+            <span>Order: ${shortId(msg.order_id)}</span>
+            <span>Retries: ${msg.retry_count}/${msg.max_retries}</span>
+          </div>
+          ${msg.error_message ? `<div class="failed-message-error" title="${msg.error_message}">${msg.error_message}</div>` : ""}
+        </div>
+        <div class="failed-message-actions">
+          <button class="btn-retry" onclick="retryFailedEvent('${msg.event_id}')" ${!msg.can_retry ? "disabled" : ""}>
+            ${msg.can_retry ? "Retry" : "Max Retries"}
+          </button>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+  } catch (e) {
+    container.innerHTML = `<div class="no-data-message"><p>${e.message}</p></div>`;
+  }
+}
+
+async function retryFailedEvent(eventId) {
+  try {
+    const result = await api(
+      "POST",
+      `/api/orders/admin/retry-event/${eventId}`,
+    );
+    alert(
+      result.success
+        ? "Retry triggered successfully!"
+        : `Retry failed: ${result.error}`,
+    );
+    loadFailedMessages();
+  } catch (e) {
+    alert(`Error: ${e.message}`);
   }
 }
 
@@ -980,6 +1277,13 @@ function connectTrackingWs(orderId) {
 /* ══════════════════════════════════════════════════════════ */
 /*  DRIVER: MANIFESTS + DELIVERY UPDATES                     */
 /* ══════════════════════════════════════════════════════════ */
+
+// Store for order details cache
+let orderDetailsCache = {};
+let signatureCanvas, signatureCtx;
+let isDrawing = false;
+let capturedPhotoData = null;
+
 async function loadManifests() {
   try {
     const data = await api(
@@ -988,34 +1292,79 @@ async function loadManifests() {
     );
     const manifests = data.manifests || data || [];
     const container = $("driver-manifests");
+
+    // Calculate summary stats
+    let total = 0,
+      completed = 0,
+      pending = 0,
+      failed = 0;
+    let hasUrgent = false;
+    let routeData = null;
+
+    manifests.forEach((m) => {
+      if (m.route_data) routeData = m.route_data;
+      (m.items || []).forEach((item) => {
+        total++;
+        if (item.status === "delivered") completed++;
+        else if (item.status === "failed") failed++;
+        else pending++;
+      });
+    });
+
+    // Update summary stats
+    if ($("ds-total")) $("ds-total").textContent = total;
+    if ($("ds-completed")) $("ds-completed").textContent = completed;
+    if ($("ds-pending")) $("ds-pending").textContent = pending;
+    if ($("ds-failed")) $("ds-failed").textContent = failed;
+
+    // Display route info if available
+    displayRouteInfo(routeData);
+
+    // Check for urgent/high priority deliveries
+    checkDriverNotifications(manifests);
+
     if (!manifests.length) {
       container.innerHTML =
-        "<p>No manifests assigned. Check with your admin.</p>";
+        '<p class="empty-state">No manifests assigned for today. Check with your admin.</p>';
       return;
     }
+
+    // Fetch order details for all items
+    const orderIds = manifests.flatMap((m) =>
+      (m.items || []).map((i) => i.order_id),
+    );
+    await fetchOrderDetails(orderIds);
+
     container.innerHTML = manifests
       .map(
         (m) => `
       <div class="manifest-card">
         <h3>📋 ${shortId(m.manifest_id)} <span class="badge ${m.status}">${m.status}</span></h3>
-        <p style="color:#666;font-size:0.85rem">Date: ${m.date} | Items: ${(m.items || []).length}</p>
+        <p style="color:var(--text-secondary);font-size:0.85rem">Date: ${m.date} | ${(m.items || []).length} deliveries</p>
         ${(m.items || [])
-          .map(
-            (item) => `
+          .map((item) => {
+            const order = orderDetailsCache[item.order_id] || {};
+            return `
           <div class="manifest-item">
-            <span>📦 ${shortId(item.order_id)} (#${item.sequence})</span>
-            <span class="badge ${item.status}">${item.status}</span>
-            ${item.proof_of_delivery ? `<span style="color:#27ae60;font-size:0.8rem">✓ POD</span>` : ""}
+            <div class="manifest-item-details">
+              <div class="manifest-item-customer">${order.recipient_name || "Customer"}</div>
+              <div class="manifest-item-address">${order.delivery_address || item.order_id}</div>
+            </div>
+            <span class="badge ${item.status}">${item.status.replace(/_/g, " ")}</span>
+            ${order.priority === "urgent" ? '<span class="badge urgent">URGENT</span>' : ""}
+            ${order.priority === "high" ? '<span class="badge high">HIGH</span>' : ""}
+            ${item.proof_of_delivery ? '<span style="color:var(--success);font-size:0.8rem">✓ POD</span>' : ""}
             ${
-              item.status === "pending" || item.status === "in_transit"
+              item.status === "pending" ||
+              item.status === "in_transit" ||
+              item.status === "picked_up"
                 ? `
               <button class="btn-xs btn-small btn-success" onclick="openDeliveryUpdate('${item.order_id}')">Update</button>
             `
                 : ""
             }
-          </div>
-        `,
-          )
+          </div>`;
+          })
           .join("")}
       </div>
     `,
@@ -1026,33 +1375,337 @@ async function loadManifests() {
   }
 }
 
-function openDeliveryUpdate(orderId) {
+async function fetchOrderDetails(orderIds) {
+  // Fetch details for orders not in cache
+  const toFetch = orderIds.filter((id) => !orderDetailsCache[id]);
+  for (const orderId of toFetch) {
+    try {
+      const order = await api("GET", `/api/orders/${orderId}`);
+      orderDetailsCache[orderId] = order;
+    } catch (e) {
+      // Order might not exist or unauthorized
+      orderDetailsCache[orderId] = { order_id: orderId };
+    }
+  }
+}
+
+function displayRouteInfo(routeData) {
+  const card = $("route-info-card");
+  const details = $("route-details");
+  if (!card || !details) return;
+
+  if (!routeData) {
+    card.style.display = "none";
+    return;
+  }
+
+  try {
+    const route =
+      typeof routeData === "string" ? JSON.parse(routeData) : routeData;
+    const stops = route.stops || route.waypoints || [];
+
+    if (!stops.length) {
+      card.style.display = "none";
+      return;
+    }
+
+    card.style.display = "block";
+    details.innerHTML = stops
+      .map(
+        (stop, idx) => `
+      <div class="route-stop">
+        <span class="route-stop-number">${idx + 1}</span>
+        <div class="route-stop-info">
+          <div class="route-stop-address">${stop.address || stop.location || "Stop " + (idx + 1)}</div>
+          <div class="route-stop-meta">${stop.eta || ""} ${stop.distance ? "• " + stop.distance : ""}</div>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+  } catch (e) {
+    card.style.display = "none";
+  }
+}
+
+function checkDriverNotifications(manifests) {
+  const notifDiv = $("driver-notifications");
+  const notifText = $("driver-notification-text");
+  if (!notifDiv || !notifText) return;
+
+  // Check for urgent/high priority pending deliveries
+  let urgentCount = 0;
+  manifests.forEach((m) => {
+    (m.items || []).forEach((item) => {
+      const order = orderDetailsCache[item.order_id];
+      if (
+        order &&
+        (order.priority === "urgent" || order.priority === "high") &&
+        (item.status === "pending" || item.status === "in_transit")
+      ) {
+        urgentCount++;
+      }
+    });
+  });
+
+  if (urgentCount > 0) {
+    notifDiv.style.display = "block";
+    notifText.textContent = `You have ${urgentCount} urgent/high priority ${urgentCount === 1 ? "delivery" : "deliveries"} pending!`;
+  } else {
+    notifDiv.style.display = "none";
+  }
+}
+
+function dismissDriverNotification() {
+  const notifDiv = $("driver-notifications");
+  if (notifDiv) notifDiv.style.display = "none";
+}
+
+async function openDeliveryUpdate(orderId) {
   $("du-order-id").value = orderId;
-  $("du-proof").value = "";
-  $("du-signature").value = "";
-  $("du-notes").value = "";
-  $("du-failure").value = "";
   $("du-status").value = "delivered";
+  $("du-notes").value = "";
   $("du-result").innerHTML = "";
+  capturedPhotoData = null;
+
+  // Reset failure section
+  toggleFailureReason();
+
+  // Clear photo preview
+  const photoPreview = $("photo-preview");
+  if (photoPreview)
+    photoPreview.innerHTML =
+      '<span class="photo-placeholder">No photo captured</span>';
+
+  // Initialize signature canvas
+  initSignatureCanvas();
+
+  // Load delivery details
+  await loadDeliveryDetails(orderId);
+
   showModal("delivery-update-modal");
+}
+
+async function loadDeliveryDetails(orderId) {
+  const infoGrid = $("du-info-grid");
+  if (!infoGrid) return;
+
+  try {
+    let order = orderDetailsCache[orderId];
+    if (!order || !order.recipient_name) {
+      order = await api("GET", `/api/orders/${orderId}`);
+      orderDetailsCache[orderId] = order;
+    }
+
+    infoGrid.innerHTML = `
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Customer Name</div>
+        <div class="delivery-info-value">${order.recipient_name || "N/A"}</div>
+      </div>
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Phone</div>
+        <div class="delivery-info-value"><a href="tel:${order.recipient_phone}">${order.recipient_phone || "N/A"}</a></div>
+      </div>
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Delivery Address</div>
+        <div class="delivery-info-value">${order.delivery_address || "N/A"}</div>
+      </div>
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Package</div>
+        <div class="delivery-info-value">${order.package_description || "N/A"} (${order.package_weight || 0} kg)</div>
+      </div>
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Priority</div>
+        <div class="delivery-info-value"><span class="badge ${order.priority}">${order.priority || "normal"}</span></div>
+      </div>
+      <div class="delivery-info-item">
+        <div class="delivery-info-label">Notes</div>
+        <div class="delivery-info-value">${order.notes || "None"}</div>
+      </div>
+    `;
+  } catch (e) {
+    infoGrid.innerHTML = '<p class="error">Could not load delivery details</p>';
+  }
+}
+
+function toggleFailureReason() {
+  const status = $("du-status").value;
+  const failureSection = $("du-failure-section");
+  const podSection = $("du-pod-section");
+
+  if (failureSection) {
+    failureSection.style.display = status === "failed" ? "block" : "none";
+  }
+  if (podSection) {
+    podSection.style.display = status === "delivered" ? "block" : "none";
+  }
+}
+
+// Signature Canvas Functions
+function initSignatureCanvas() {
+  signatureCanvas = $("signature-canvas");
+  if (!signatureCanvas) return;
+
+  signatureCtx = signatureCanvas.getContext("2d");
+  clearSignature();
+
+  // Set up event listeners
+  signatureCanvas.addEventListener("mousedown", startDrawing);
+  signatureCanvas.addEventListener("mousemove", draw);
+  signatureCanvas.addEventListener("mouseup", stopDrawing);
+  signatureCanvas.addEventListener("mouseout", stopDrawing);
+
+  // Touch events for mobile
+  signatureCanvas.addEventListener("touchstart", handleTouchStart);
+  signatureCanvas.addEventListener("touchmove", handleTouchMove);
+  signatureCanvas.addEventListener("touchend", stopDrawing);
+}
+
+function startDrawing(e) {
+  isDrawing = true;
+  signatureCtx.beginPath();
+  signatureCtx.moveTo(e.offsetX, e.offsetY);
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  signatureCtx.lineTo(e.offsetX, e.offsetY);
+  signatureCtx.strokeStyle = "#000";
+  signatureCtx.lineWidth = 2;
+  signatureCtx.lineCap = "round";
+  signatureCtx.stroke();
+}
+
+function stopDrawing() {
+  isDrawing = false;
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = signatureCanvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  isDrawing = true;
+  signatureCtx.beginPath();
+  signatureCtx.moveTo(x, y);
+}
+
+function handleTouchMove(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = signatureCanvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  signatureCtx.lineTo(x, y);
+  signatureCtx.strokeStyle = "#000";
+  signatureCtx.lineWidth = 2;
+  signatureCtx.lineCap = "round";
+  signatureCtx.stroke();
+}
+
+function clearSignature() {
+  if (!signatureCtx) return;
+  signatureCtx.fillStyle = "#fff";
+  signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+}
+
+function getSignatureData() {
+  if (!signatureCanvas) return null;
+  // Check if signature is empty (all white)
+  const imageData = signatureCtx.getImageData(
+    0,
+    0,
+    signatureCanvas.width,
+    signatureCanvas.height,
+  );
+  const isEmpty = imageData.data.every((v, i) => i % 4 === 3 || v >= 250);
+  if (isEmpty) return null;
+  return signatureCanvas.toDataURL("image/png");
+}
+
+// Photo Capture Functions
+function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    capturedPhotoData = e.target.result;
+    const preview = $("photo-preview");
+    if (preview) {
+      preview.innerHTML = `<img src="${capturedPhotoData}" alt="Proof of delivery">`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto() {
+  capturedPhotoData = null;
+  const preview = $("photo-preview");
+  if (preview) {
+    preview.innerHTML =
+      '<span class="photo-placeholder">No photo captured</span>';
+  }
+  const input = $("photo-input");
+  if (input) input.value = "";
 }
 
 async function submitDeliveryUpdate() {
   try {
     const orderId = $("du-order-id").value;
-    const body = { status: $("du-status").value };
-    if ($("du-proof").value) body.proof_of_delivery = $("du-proof").value;
-    if ($("du-signature").value) body.signature = $("du-signature").value;
+    const status = $("du-status").value;
+
+    const body = { status };
+
+    // Add signature if delivered
+    if (status === "delivered") {
+      const sigData = getSignatureData();
+      if (sigData) body.signature_data = sigData;
+      if (capturedPhotoData) body.proof_of_delivery = capturedPhotoData;
+    }
+
+    // Add failure reason if failed
+    if (status === "failed") {
+      const reason = $("du-failure-reason").value;
+      if (!reason) {
+        $("du-result").innerHTML =
+          '<p class="error">Please select a failure reason</p>';
+        return;
+      }
+      body.failure_reason =
+        reason === "Other" ? $("du-failure-other").value : reason;
+    }
+
     if ($("du-notes").value) body.notes = $("du-notes").value;
-    if ($("du-failure").value) body.failure_reason = $("du-failure").value;
+
     await api("PATCH", `/api/tracking/delivery-items/${orderId}`, body);
-    $("du-result").innerHTML = '<p class="success">Updated!</p>';
+    $("du-result").innerHTML =
+      '<p class="success">Delivery updated successfully!</p>';
+
+    // Clear cache and refresh
+    delete orderDetailsCache[orderId];
     loadManifests();
-    setTimeout(() => hideModal("delivery-update-modal"), 800);
+    setTimeout(() => hideModal("delivery-update-modal"), 1000);
   } catch (e) {
     $("du-result").innerHTML = `<p class="error">${e.message}</p>`;
   }
 }
+
+// Show/hide other failure reason input
+document.addEventListener("DOMContentLoaded", () => {
+  const failureReason = $("du-failure-reason");
+  if (failureReason) {
+    failureReason.addEventListener("change", (e) => {
+      const otherInput = $("du-failure-other");
+      if (otherInput) {
+        otherInput.style.display =
+          e.target.value === "Other" ? "block" : "none";
+      }
+    });
+  }
+});
 
 /* ══════════════════════════════════════════════════════════ */
 /*  PROFILE                                                  */

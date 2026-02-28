@@ -19,7 +19,7 @@
         <div class="auth-brand">
           <div class="auth-logo">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="12" fill="#06b6d4" />
+              <rect width="48" height="48" rx="12" fill="#2563eb" />
               <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.7" />
               <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
               <circle cx="18" cy="34" r="2.5" fill="#fff" />
@@ -27,7 +27,7 @@
             </svg>
           </div>
           <h1>SwiftTrack</h1>
-          <p>Logistics Management Platform</p>
+          <p>Operations &amp; Delivery Control Center</p>
         </div>
         <div class="auth-features">
           <div class="auth-feature">
@@ -147,7 +147,7 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
           <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="#06b6d4" />
+            <rect width="48" height="48" rx="12" fill="#2563eb" />
             <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.7" />
             <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
             <circle cx="18" cy="34" r="2.5" fill="#fff" />
@@ -248,34 +248,7 @@
             class="tab-content"
             style="display: none"
           >
-            <!-- Greeting Banner -->
-            <div class="dash-greeting" id="dash-greeting-banner">
-              <div class="dash-greeting-left">
-                <h2 id="dash-greeting-msg">Welcome back!</h2>
-                <p id="dash-greeting-sub">
-                  Here's what's happening with your logistics today.
-                </p>
-              </div>
-              <div class="dash-greeting-right">
-                <div class="dash-greeting-time" id="dash-clock"></div>
-                <div class="dash-greeting-date" id="dash-date"></div>
-              </div>
-            </div>
-            <div id="stats-cards" class="stats-grid"></div>
-            <div class="section-row">
-              <div class="section-half">
-                <div class="section-half-header">
-                  <h3>Recent Orders</h3>
-                </div>
-                <div id="admin-recent-orders"></div>
-              </div>
-              <div class="section-half">
-                <div class="section-half-header">
-                  <h3>Recent Events</h3>
-                </div>
-                <div id="admin-recent-events"></div>
-              </div>
-            </div>
+            <div id="admin-dashboard-root"></div>
           </div>
 
           <!-- ADMIN: User Management -->
@@ -439,24 +412,7 @@
           <!-- ══════════════════════════════════════════════════ -->
           <!-- CLIENT: My Orders -->
           <div id="orders-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>My Orders</h2>
-              <button class="btn-small btn-outline" onclick="loadOrders()">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-            <div id="orders-list" class="orders-grid"></div>
+            <div id="client-dashboard-root"></div>
           </div>
 
           <!-- CLIENT / ADMIN: New Order -->
@@ -577,24 +533,7 @@
 
           <!-- DRIVER: My Manifests -->
           <div id="driver-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>My Deliveries</h2>
-              <button onclick="loadManifests()" class="btn-small btn-outline">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-            <div id="driver-manifests"></div>
+            <div id="driver-dashboard-root"></div>
           </div>
 
           <!-- DRIVER: Assigned Orders -->
@@ -863,7 +802,7 @@
 
     <!-- Delivery Update Modal -->
     <div class="modal-overlay" id="delivery-update-modal" style="display: none">
-      <div class="modal card">
+      <div class="modal card modal-lg">
         <div class="modal-header">
           <h2>Update Delivery</h2>
           <button
@@ -875,46 +814,127 @@
         </div>
         <div class="modal-body">
           <input type="hidden" id="du-order-id" />
-          <div class="form-group">
-            <label>Status</label>
-            <select id="du-status">
-              <option value="in_transit">In Transit</option>
-              <option value="delivered">Delivered</option>
-              <option value="failed">Failed</option>
+
+          <!-- Delivery Details Section -->
+          <div class="delivery-details-section" id="du-delivery-details">
+            <h3 class="form-section-title">Delivery Details</h3>
+            <div class="delivery-info-grid" id="du-info-grid"></div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Status <span class="required">*</span></label>
+              <select id="du-status" onchange="toggleFailureReason()">
+                <option value="picked_up">Picked Up</option>
+                <option value="in_transit">In Transit</option>
+                <option value="delivered">Delivered</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Proof of Delivery Section -->
+          <div id="du-pod-section">
+            <h3 class="form-section-title">Proof of Delivery</h3>
+
+            <!-- Signature Canvas -->
+            <div class="form-group">
+              <label>Customer Signature</label>
+              <div class="signature-container">
+                <canvas id="signature-canvas" width="400" height="150"></canvas>
+                <div class="signature-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-outline"
+                    onclick="clearSignature()"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Photo Capture -->
+            <div class="form-group">
+              <label>Photo Evidence</label>
+              <div class="photo-capture-container">
+                <div class="photo-preview" id="photo-preview">
+                  <span class="photo-placeholder">No photo captured</span>
+                </div>
+                <div class="photo-actions">
+                  <input
+                    type="file"
+                    id="photo-input"
+                    accept="image/*"
+                    capture="environment"
+                    style="display: none"
+                    onchange="handlePhotoSelect(event)"
+                  />
+                  <button
+                    type="button"
+                    class="btn-small btn-outline"
+                    onclick="document.getElementById('photo-input').click()"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                      />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    Capture Photo
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-small btn-outline"
+                    onclick="clearPhoto()"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Failure Section (shown when status is failed) -->
+          <div class="form-group" id="du-failure-section" style="display: none">
+            <label>Failure Reason <span class="required">*</span></label>
+            <select id="du-failure-reason">
+              <option value="">Select reason...</option>
+              <option value="Customer not available">
+                Customer not available
+              </option>
+              <option value="Wrong address">Wrong address</option>
+              <option value="Customer refused delivery">
+                Customer refused delivery
+              </option>
+              <option value="Package damaged">Package damaged</option>
+              <option value="Access denied">Access denied to location</option>
+              <option value="Other">Other</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Proof of Delivery (text/URL)</label>
             <input
               type="text"
-              id="du-proof"
-              placeholder="Photo URL or description"
+              id="du-failure-other"
+              placeholder="Specify other reason..."
+              style="margin-top: 8px; display: none"
             />
           </div>
-          <div class="form-group">
-            <label>Signature</label>
-            <input
-              type="text"
-              id="du-signature"
-              placeholder="Recipient signature/name"
-            />
-          </div>
+
           <div class="form-group">
             <label>Notes</label>
-            <input
-              type="text"
+            <textarea
               id="du-notes"
+              rows="2"
               placeholder="Additional notes..."
-            />
+            ></textarea>
           </div>
-          <div class="form-group">
-            <label>Failure Reason (if failed)</label>
-            <input
-              type="text"
-              id="du-failure"
-              placeholder="Reason for failure..."
-            />
-          </div>
+
           <button onclick="submitDeliveryUpdate()" class="btn-primary">
             Update Delivery
           </button>
@@ -943,6 +963,15 @@
       onclick="toggleSidebar()"
     ></div>
 
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
     <script src="js/app.js"></script>
+    <script src="js/dashboard.react.js"></script>
   </body>
 </html>

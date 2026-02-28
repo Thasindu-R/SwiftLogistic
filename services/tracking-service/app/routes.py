@@ -130,6 +130,7 @@ async def create_manifest(
         status="pending",
     )
     db.add(manifest)
+    await db.flush()  # Flush manifest first to satisfy FK constraint
 
     for idx, oid in enumerate(payload.order_ids):
         item = DeliveryItem(

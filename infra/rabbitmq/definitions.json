@@ -39,6 +39,13 @@
       "type": "fanout",
       "durable": true,
       "auto_delete": false
+    },
+    {
+      "name": "swifttrack.dlq",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false
     }
   ],
   "queues": [
@@ -79,6 +86,41 @@
     },
     {
       "name": "notifications.websocket",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.saga.replies",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.processing.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.cms.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.wms.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.ros.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -132,6 +174,38 @@
       "destination": "notifications.websocket",
       "destination_type": "queue",
       "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "swifttrack.dlq",
+      "vhost": "/",
+      "destination": "order.processing.dlq",
+      "destination_type": "queue",
+      "routing_key": "order.processing",
+      "arguments": {}
+    },
+    {
+      "source": "swifttrack.dlq",
+      "vhost": "/",
+      "destination": "order.cms.dlq",
+      "destination_type": "queue",
+      "routing_key": "order.cms",
+      "arguments": {}
+    },
+    {
+      "source": "swifttrack.dlq",
+      "vhost": "/",
+      "destination": "order.wms.dlq",
+      "destination_type": "queue",
+      "routing_key": "order.wms",
+      "arguments": {}
+    },
+    {
+      "source": "swifttrack.dlq",
+      "vhost": "/",
+      "destination": "order.ros.dlq",
+      "destination_type": "queue",
+      "routing_key": "order.ros",
       "arguments": {}
     }
   ]
