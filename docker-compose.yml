@@ -113,11 +113,22 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-swifttrack}:${POSTGRES_PASSWORD:-swifttrack}@postgres:5432/${POSTGRES_DB:-swifttrack}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      # Middleware integration endpoints
+      CMS_URL: http://mock-cms:8004
+      ROS_URL: http://mock-ros:8005
+      WMS_HOST: mock-wms
+      WMS_PORT: "9000"
     depends_on:
       rabbitmq:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      mock-cms:
+        condition: service_started
+      mock-ros:
+        condition: service_started
+      mock-wms:
+        condition: service_started
     networks:
       - swifttrack-net
 

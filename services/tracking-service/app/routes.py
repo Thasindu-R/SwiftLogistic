@@ -123,11 +123,18 @@ async def create_manifest(
 ):
     """Admin: create a delivery manifest assigning orders to a driver."""
     manifest_id = str(uuid.uuid4())
+    # Serialize route_data to JSON string if it's a dict
+    route_json = None
+    if payload.route_data:
+        import json as _json
+        route_json = _json.dumps(payload.route_data) if isinstance(payload.route_data, dict) else payload.route_data
+
     manifest = DeliveryManifest(
         manifest_id=manifest_id,
         driver_id=payload.driver_id,
         date=date.fromisoformat(payload.date),
         status="pending",
+        route_data=route_json,
     )
     db.add(manifest)
     await db.flush()  # Flush manifest first to satisfy FK constraint
@@ -156,6 +163,7 @@ async def create_manifest(
         driver_id=manifest.driver_id,
         date=str(manifest.date),
         status=manifest.status,
+        route_data=manifest.route_data,
         items=[
             {
                 "order_id": i.order_id,

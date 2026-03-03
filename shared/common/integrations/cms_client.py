@@ -11,7 +11,7 @@ SOAP Operations:
 - CreateBilling: Create billing record for order
 
 Usage:
-    async with CMSClient("http://mock-cms:8005") as client:
+    async with CMSClient("http://mock-cms:8004") as client:
         result = await client.validate_client(client_id=1)
         billing = await client.create_billing(order_data)
 """

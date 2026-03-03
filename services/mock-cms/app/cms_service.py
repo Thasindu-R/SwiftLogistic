@@ -9,6 +9,7 @@ Also consumes order.created events from RabbitMQ and publishes
 cms.billing.confirmed / cms.billing.failed events.
 """
 
+import asyncio
 import json
 import logging
 import uuid
@@ -28,10 +29,40 @@ clients_db: dict[int, dict] = {
     1: {"client_id": 1, "name": "ABC Online Store", "contract": "GOLD", "active": True},
     2: {"client_id": 2, "name": "XYZ Retail", "contract": "SILVER", "active": True},
     3: {"client_id": 3, "name": "Demo Client", "contract": "BRONZE", "active": True},
+    4: {"client_id": 4, "name": "ABC Online Store (DB)", "contract": "GOLD", "active": True},
+    5: {"client_id": 5, "name": "XYZ Retail (DB)", "contract": "SILVER", "active": True},
 }
 billing_records: list[dict] = []
 
 RABBITMQ_URL = "amqp://guest:guest@rabbitmq:5672/"
+
+
+async def connect_rabbitmq_with_retry(
+    url: str,
+    *,
+    retries: int = 30,
+    delay_seconds: float = 2.0,
+) -> aio_pika.abc.AbstractRobustConnection:
+    """Connect to RabbitMQ with retry.
+
+    These mock services are often started alongside RabbitMQ; a short
+    retry loop prevents a single early connection-refused from disabling
+    the demo flow.
+    """
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return await aio_pika.connect_robust(url)
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                "RabbitMQ not ready (attempt %d/%d): %s",
+                attempt,
+                retries,
+                e,
+            )
+            await asyncio.sleep(delay_seconds)
+    raise RuntimeError(f"Failed to connect to RabbitMQ after {retries} attempts: {last_error}")
 
 
 # ── SOAP helpers ─────────────────────────────────────────────
@@ -135,7 +166,7 @@ async def lifespan(application: FastAPI):
     logger.info("Mock CMS starting …")
     # Connect to RabbitMQ and consume order.created events
     try:
-        connection = await aio_pika.connect_robust(RABBITMQ_URL)
+        connection = await connect_rabbitmq_with_retry(RABBITMQ_URL)
         channel = await connection.channel()
         exchange = await channel.declare_exchange("swifttrack.orders", aio_pika.ExchangeType.TOPIC, durable=True)
         queue = await channel.declare_queue("order.cms", durable=True)
@@ -214,8 +245,12 @@ async def soap_endpoint(request: Request):
 
     op_tag = operation_el.tag.split("}")[-1] if "}" in operation_el.tag else operation_el.tag
 
+    op_tag = operation_el.tag.split("}")[-1] if "}" in operation_el.tag else operation_el.tag
+
     if op_tag == "GetClientInfo":
-        cid_el = operation_el.find("ClientId") or operation_el.find(f"{{{CMS_NS}}}ClientId")
+        cid_el = operation_el.find("ClientId")
+        if cid_el is None:
+            cid_el = operation_el.find(f"{{{CMS_NS}}}ClientId")
         if cid_el is None:
             return Response(content=soap_fault("Client", "Missing ClientId"), media_type="text/xml")
         client = clients_db.get(int(cid_el.text or "0"))
@@ -230,12 +265,97 @@ async def soap_endpoint(request: Request):
         return Response(content=resp_xml, media_type="text/xml")
 
     elif op_tag == "ValidateClient":
-        cid_el = operation_el.find("ClientId") or operation_el.find(f"{{{CMS_NS}}}ClientId")
+        cid_el = operation_el.find("ClientId")
+        if cid_el is None:
+            cid_el = operation_el.find(f"{{{CMS_NS}}}ClientId")
         client = clients_db.get(int(cid_el.text or "0")) if cid_el is not None else None
         valid = client is not None and client.get("active", False)
         resp_xml = soap_envelope(f"""<cms:ValidateClientResponse>
       <cms:Valid>{str(valid).lower()}</cms:Valid>
     </cms:ValidateClientResponse>""")
+        return Response(content=resp_xml, media_type="text/xml")
+
+    elif op_tag == "CreateBilling":
+        order_id_el = operation_el.find("OrderId")
+        if order_id_el is None:
+            order_id_el = operation_el.find(f"{{{CMS_NS}}}OrderId")
+        cid_el = operation_el.find("ClientId")
+        if cid_el is None:
+            cid_el = operation_el.find(f"{{{CMS_NS}}}ClientId")
+        amount_el = operation_el.find("Amount")
+        if amount_el is None:
+            amount_el = operation_el.find(f"{{{CMS_NS}}}Amount")
+
+        order_id = order_id_el.text if order_id_el is not None else ""
+        client_id = int(cid_el.text or "0") if cid_el is not None else 0
+        amount = float(amount_el.text or "0") if amount_el is not None else 0.0
+
+        client = clients_db.get(client_id)
+        if not client or not client.get("active", False):
+            return Response(
+                content=soap_fault("Client", f"Client {client_id} not found or inactive"),
+                media_type="text/xml",
+            )
+
+        billing = {
+            "billing_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "client_id": client_id,
+            "amount": amount,
+            "currency": "LKR",
+            "status": "invoiced",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        billing_records.append(billing)
+        logger.info("CMS billing created via SOAP: %s", billing["billing_id"])
+
+        resp_xml = soap_envelope(f"""<cms:CreateBillingResponse>
+      <cms:BillingId>{billing['billing_id']}</cms:BillingId>
+      <cms:OrderId>{order_id}</cms:OrderId>
+      <cms:Amount>{amount}</cms:Amount>
+      <cms:Currency>LKR</cms:Currency>
+      <cms:Status>invoiced</cms:Status>
+    </cms:CreateBillingResponse>""")
+        return Response(content=resp_xml, media_type="text/xml")
+
+    elif op_tag == "TransmitOrder":
+        # Full order transmission: validate + billing in one call
+        cid_el = operation_el.find("ClientId")
+        if cid_el is None:
+            cid_el = operation_el.find(f"{{{CMS_NS}}}ClientId")
+        order_id_el = operation_el.find("OrderId")
+        if order_id_el is None:
+            order_id_el = operation_el.find(f"{{{CMS_NS}}}OrderId")
+
+        client_id = int(cid_el.text or "0") if cid_el is not None else 0
+        order_id = order_id_el.text if order_id_el is not None else ""
+
+        client = clients_db.get(client_id)
+        if not client or not client.get("active", False):
+            return Response(
+                content=soap_fault("Business", f"Client {client_id} not found or inactive"),
+                media_type="text/xml",
+            )
+
+        billing = {
+            "billing_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "client_id": client_id,
+            "amount": 150.0,
+            "currency": "LKR",
+            "status": "invoiced",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        billing_records.append(billing)
+        logger.info("CMS order transmitted via SOAP: order=%s client=%s", order_id, client_id)
+
+        resp_xml = soap_envelope(f"""<cms:TransmitOrderResponse>
+      <cms:Success>true</cms:Success>
+      <cms:OrderId>{order_id}</cms:OrderId>
+      <cms:ClientValidated>true</cms:ClientValidated>
+      <cms:BillingId>{billing['billing_id']}</cms:BillingId>
+      <cms:ClientName>{client['name']}</cms:ClientName>
+    </cms:TransmitOrderResponse>""")
         return Response(content=resp_xml, media_type="text/xml")
 
     else:

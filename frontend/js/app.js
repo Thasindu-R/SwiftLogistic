@@ -9,10 +9,174 @@ const API_BASE =
     : `${window.location.protocol}//${window.location.hostname}:8000`;
 const WS_BASE = API_BASE.replace("http", "ws");
 
-let token = localStorage.getItem("swifttrack_token") || null;
-let currentUser = JSON.parse(localStorage.getItem("swifttrack_user") || "null");
+const AUTH_KEYS = {
+  token: "swifttrack_token",
+  user: "swifttrack_user",
+  sidebarCollapsed: "swifttrack_sidebar_collapsed",
+};
+
+function readAuthFrom(storage) {
+  try {
+    const t = storage.getItem(AUTH_KEYS.token);
+    const u = JSON.parse(storage.getItem(AUTH_KEYS.user) || "null");
+    return { token: t || null, user: u || null };
+  } catch {
+    return { token: null, user: null };
+  }
+}
+
+function loadAuth() {
+  const local = readAuthFrom(localStorage);
+  if (local.token && local.user) return { ...local, storage: localStorage };
+  const session = readAuthFrom(sessionStorage);
+  if (session.token && session.user)
+    return { ...session, storage: sessionStorage };
+  return { token: null, user: null, storage: localStorage };
+}
+
+function clearAuth() {
+  [localStorage, sessionStorage].forEach((s) => {
+    try {
+      s.removeItem(AUTH_KEYS.token);
+      s.removeItem(AUTH_KEYS.user);
+    } catch {}
+  });
+}
+
+function getActiveAuthStorage() {
+  if (localStorage.getItem(AUTH_KEYS.token)) return localStorage;
+  if (sessionStorage.getItem(AUTH_KEYS.token)) return sessionStorage;
+  return localStorage;
+}
+
+const bootAuth = loadAuth();
+let token = bootAuth.token;
+let currentUser = bootAuth.user;
 let trackingWs = null;
 let _debounceTimers = {};
+
+let _authStorage = bootAuth.storage;
+
+/* ══════════════════════════════════════════════════════════ */
+/*  TOASTS + NOTIFICATIONS                                   */
+/* ══════════════════════════════════════════════════════════ */
+const _notifications = [];
+
+function toast(message, type = "info", opts = {}) {
+  const container = $("toast-container");
+  if (!container) return;
+
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.setAttribute("role", "status");
+  const title =
+    opts.title ||
+    (type === "success"
+      ? "Success"
+      : type === "error"
+        ? "Error"
+        : type === "warning"
+          ? "Warning"
+          : "Info");
+  el.innerHTML = `
+    <div class="row">
+      <div>
+        <div class="ttl">${escapeHtml(title)}</div>
+        <div class="msg"></div>
+      </div>
+      <button class="x" aria-label="Close" type="button">×</button>
+    </div>
+  `;
+  el.querySelector(".msg").textContent = String(message || "");
+
+  const close = () => {
+    el.classList.add("hide");
+    setTimeout(() => el.remove(), 180);
+  };
+  el.querySelector(".x").onclick = close;
+  container.appendChild(el);
+
+  const duration =
+    typeof opts.duration === "number"
+      ? opts.duration
+      : type === "error"
+        ? 5500
+        : type === "warning"
+          ? 4500
+          : 3200;
+  if (duration > 0) setTimeout(close, duration);
+}
+
+function pushNotification({
+  title,
+  message,
+  type = "info",
+  timestamp = new Date().toISOString(),
+} = {}) {
+  _notifications.unshift({
+    id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    title: title || "Update",
+    message: message || "",
+    type,
+    timestamp,
+    read: false,
+  });
+  _notifications.splice(30);
+  renderNotifications();
+}
+
+function renderNotifications() {
+  const list = $("notification-list");
+  const badge = $("notif-count");
+  if (!list || !badge) return;
+
+  const unread = _notifications.filter((n) => !n.read).length;
+  badge.textContent = String(unread);
+  badge.style.display = unread > 0 ? "inline-flex" : "none";
+
+  if (!_notifications.length) {
+    list.innerHTML = `<div class="no-data-message"><p>No notifications yet.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = _notifications
+    .map((n) => {
+      const when = n.timestamp ? new Date(n.timestamp).toLocaleString() : "";
+      return `
+        <div class="notif-item ${n.read ? "read" : "unread"}">
+          <div class="nt">
+            <div class="title">${escapeHtml(n.title)}</div>
+            <div class="time">${escapeHtml(when)}</div>
+          </div>
+          <div class="msg">${escapeHtml(n.message)}</div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;");
+}
+
+function toggleNotifications(force) {
+  const panel = $("notification-panel");
+  const overlay = $("notif-overlay");
+  if (!panel || !overlay) return;
+  const show =
+    typeof force === "boolean" ? force : panel.style.display !== "block";
+  panel.style.display = show ? "block" : "none";
+  overlay.style.display = show ? "block" : "none";
+
+  if (show) {
+    _notifications.forEach((n) => (n.read = true));
+    renderNotifications();
+  }
+}
 
 /* ══════════════════════════════════════════════════════════ */
 /*  HELPERS                                                  */
@@ -61,26 +225,61 @@ function hideModal(id) {
 /*  AUTH                                                     */
 /* ══════════════════════════════════════════════════════════ */
 function showLogin() {
-  $("login-form").style.display = "block";
-  $("register-form").style.display = "none";
-  $("auth-error").textContent = "";
+  const loginForm = $("login-form");
+  const registerForm = $("register-form");
+  if (loginForm) loginForm.style.display = "block";
+  if (registerForm) registerForm.style.display = "none";
+  const err = $("auth-error");
+  if (err) err.textContent = "";
 }
 function showRegister() {
-  $("login-form").style.display = "none";
-  $("register-form").style.display = "block";
-  $("auth-error").textContent = "";
+  const loginForm = $("login-form");
+  const registerForm = $("register-form");
+  if (loginForm) loginForm.style.display = "none";
+  if (registerForm) registerForm.style.display = "block";
+  const err = $("auth-error");
+  if (err) err.textContent = "";
 }
 
 async function login() {
+  const btn = $("login-btn");
+  const err = $("auth-error");
+  if (err) err.textContent = "";
+  if (btn) {
+    btn.classList.add("is-loading");
+    btn.disabled = true;
+  }
   try {
+    const remember = $("remember-me") ? $("remember-me").checked : true;
     const data = await api("POST", "/api/auth/login", {
       username: $("login-username").value,
       password: $("login-password").value,
     });
-    setAuthState(data.access_token, data.user);
+    setAuthState(data.access_token, data.user, remember);
+    const roleField = $("login-role");
+    if (roleField) roleField.value = data.user?.role || "";
+    toast("Signed in successfully.", "success");
+    pushNotification({
+      title: "Signed in",
+      message: `Welcome back, ${data.user?.full_name || data.user?.username || ""}`,
+      type: "success",
+    });
   } catch (e) {
-    $("auth-error").textContent = e.message;
+    if (err) err.textContent = e.message;
+    toast(e.message || "Login failed.", "error");
+  } finally {
+    if (btn) {
+      btn.classList.remove("is-loading");
+      btn.disabled = false;
+    }
   }
+}
+
+function forgotPassword() {
+  toast(
+    "Password resets are not implemented in this demo. Ask an admin to reset your credentials.",
+    "info",
+  );
 }
 
 async function register() {
@@ -98,25 +297,28 @@ async function register() {
   }
 }
 
-function setAuthState(newToken, user) {
+function setAuthState(newToken, user, remember = true) {
   token = newToken;
   currentUser = user;
-  localStorage.setItem("swifttrack_token", token);
-  localStorage.setItem("swifttrack_user", JSON.stringify(user));
+  clearAuth();
+  _authStorage = remember ? localStorage : sessionStorage;
+  _authStorage.setItem(AUTH_KEYS.token, token);
+  _authStorage.setItem(AUTH_KEYS.user, JSON.stringify(user));
   showDashboard();
 }
 
 function logout() {
   token = null;
   currentUser = null;
-  localStorage.removeItem("swifttrack_token");
-  localStorage.removeItem("swifttrack_user");
+  clearAuth();
   $("auth-section").style.display = "flex";
   $("dashboard-section").style.display = "none";
   if (trackingWs) {
     trackingWs.close();
     trackingWs = null;
   }
+  const roleField = $("login-role");
+  if (roleField) roleField.value = "Auto-detected after sign in";
 }
 
 function toggleSidebar() {
@@ -124,6 +326,18 @@ function toggleSidebar() {
   const overlay = $("sidebar-overlay");
   sidebar.classList.toggle("open");
   overlay.classList.toggle("open");
+}
+
+function toggleSidebarCollapse() {
+  const dash = $("dashboard-section");
+  if (!dash) return;
+  dash.classList.toggle("sidebar-collapsed");
+  try {
+    localStorage.setItem(
+      AUTH_KEYS.sidebarCollapsed,
+      dash.classList.contains("sidebar-collapsed") ? "1" : "0",
+    );
+  } catch {}
 }
 
 /* ══════════════════════════════════════════════════════════ */
@@ -153,6 +367,14 @@ function showDashboard() {
     console.warn("React dashboards failed to mount", e);
   }
 
+  // Apply sidebar collapse preference
+  try {
+    const collapsed = localStorage.getItem(AUTH_KEYS.sidebarCollapsed) === "1";
+    if (collapsed) $("dashboard-section").classList.add("sidebar-collapsed");
+  } catch {}
+
+  renderNotifications();
+
   buildTabs();
 }
 
@@ -160,6 +382,18 @@ function showDashboard() {
 const NAV_ICONS = {
   "admin-dashboard":
     '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  analytics:
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="18" cy="7" r="1"/></svg>',
+  "system-logs":
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>',
+  "client-dashboard":
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>',
+  "driver-dashboard":
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  "route-map":
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>',
+  "update-status":
+    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
   users:
     '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
   "all-orders":
@@ -183,22 +417,28 @@ const NAV_ICONS = {
 const TAB_CONFIG = {
   admin: [
     { id: "admin-dashboard", label: "Dashboard", load: loadAdminDashboard },
+    { id: "all-orders", label: "Orders", load: loadAllOrders },
+    {
+      id: "integration",
+      label: "Integration Monitor",
+      load: loadIntegrationEvents,
+    },
+    { id: "system-logs", label: "System Logs", load: loadSystemLogs },
     { id: "users", label: "Users", load: loadUsers },
-    { id: "all-orders", label: "All Orders", load: loadAllOrders },
-    { id: "new-order", label: "New Order", load: null },
     { id: "manifests", label: "Manifests", load: loadAllManifests },
-    { id: "integration", label: "Integrations", load: loadIntegrationEvents },
-    { id: "tracking", label: "Track", load: null },
+    { id: "analytics", label: "Analytics", load: loadAnalytics },
   ],
   client: [
+    { id: "client-dashboard", label: "Dashboard", load: loadClientDashboard },
     { id: "orders", label: "My Orders", load: loadOrders },
-    { id: "new-order", label: "New Order", load: null },
-    { id: "tracking", label: "Track Order", load: null },
+    { id: "tracking", label: "Track Shipment", load: null },
+    { id: "new-order", label: "Create Order", load: null },
   ],
   driver: [
-    { id: "driver-orders", label: "My Orders", load: loadDriverOrders },
-    { id: "driver", label: "Manifests", load: loadManifests },
-    { id: "tracking", label: "Track", load: null },
+    { id: "driver-dashboard", label: "Dashboard", load: loadManifests },
+    { id: "driver-orders", label: "My Deliveries", load: loadDriverOrders },
+    { id: "route-map", label: "Route Map", load: loadRouteMap },
+    { id: "update-status", label: "Update Status", load: loadManifests },
   ],
 };
 
@@ -247,6 +487,455 @@ function switchTab(tabId, btnEl, loadFn) {
   if (sidebar && sidebar.classList.contains("open")) {
     sidebar.classList.remove("open");
     if (overlay) overlay.classList.remove("open");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: ANALYTICS                                         */
+/* ══════════════════════════════════════════════════════════ */
+let _chartOrders = null;
+let _chartStatus = null;
+
+function statusToPct(status) {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("cancel")) return 100;
+  if (s.includes("fail")) return 100;
+  if (s.includes("deliver")) return 100;
+  if (s.includes("transit") || s.includes("picked")) return 70;
+  if (s.includes("process")) return 40;
+  if (s.includes("confirm")) return 25;
+  if (s.includes("pend") || s.includes("create")) return 10;
+  return 0;
+}
+
+async function loadAnalytics() {
+  const ordersCanvas = $("chart-orders");
+  const statusCanvas = $("chart-status");
+  if (!ordersCanvas || !statusCanvas) return;
+  if (typeof Chart === "undefined") {
+    toast("Chart.js failed to load.", "error");
+    return;
+  }
+
+  try {
+    // Pie: status distribution
+    const stats = await api("GET", "/api/orders/stats/summary");
+    const statusLabels = [
+      "pending",
+      "confirmed",
+      "processing",
+      "in_transit",
+      "delivered",
+      "failed",
+      "cancelled",
+    ];
+    const statusValues = statusLabels.map((k) => Number(stats[k] || 0));
+
+    if (_chartStatus) _chartStatus.destroy();
+    _chartStatus = new Chart(statusCanvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: statusLabels.map((s) => s.replace(/_/g, " ")),
+        datasets: [
+          {
+            data: statusValues,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "bottom" },
+        },
+      },
+    });
+
+    // Line: recent orders by day (client-side aggregation)
+    const recent = await api("GET", "/api/orders/?limit=100");
+    const orders = recent.orders || [];
+    const countsByDay = {};
+    orders.forEach((o) => {
+      const day = o.created_at ? new Date(o.created_at) : null;
+      if (!day) return;
+      const key = day.toISOString().slice(0, 10);
+      countsByDay[key] = (countsByDay[key] || 0) + 1;
+    });
+
+    const days = [];
+    const values = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push(key.slice(5));
+      values.push(countsByDay[key] || 0);
+    }
+
+    if (_chartOrders) _chartOrders.destroy();
+    _chartOrders = new Chart(ordersCanvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: days,
+        datasets: [
+          {
+            label: "Orders",
+            data: values,
+            tension: 0.35,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+        },
+      },
+    });
+  } catch (e) {
+    toast(e.message || "Failed to load analytics.", "error");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: SYSTEM LOGS  (sub-tabs)                           */
+/* ══════════════════════════════════════════════════════════ */
+
+/** Switch between sub-tab panels inside System Logs */
+function switchLogsSubTab(panelId, btnEl) {
+  // Hide all sub-panels
+  document
+    .querySelectorAll(".logs-sub-panel")
+    .forEach((p) => (p.style.display = "none"));
+  // Show target
+  const target = $("logs-" + panelId + "-panel");
+  if (target) target.style.display = "";
+  // Toggle active button
+  document
+    .querySelectorAll("#logs-sub-tabs .sub-tab")
+    .forEach((b) => b.classList.remove("active"));
+  if (btnEl) btnEl.classList.add("active");
+  // Load data for the tab
+  const loaders = {
+    integration: loadSystemLogs,
+    transactions: loadTransactionHistory,
+    audit: loadAuditTrail,
+    errors: loadErrorSummary,
+  };
+  if (loaders[panelId]) loaders[panelId]();
+}
+
+/** Integration Logs sub-tab */
+async function loadSystemLogs() {
+  const container = $("system-logs-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading logs…</p>';
+  try {
+    const status = $("log-status-filter") ? $("log-status-filter").value : "";
+    const target = $("log-target-filter") ? $("log-target-filter").value : "";
+    const hours = $("log-hours-filter") ? $("log-hours-filter").value : "24";
+    let qs = `?hours=${hours}&limit=100&offset=0`;
+    if (status) qs += `&severity=${status}`;
+    if (target) qs += `&target_system=${target}`;
+    const data = await api("GET", `/api/orders/admin/logs/integration${qs}`);
+    const logs = data.logs || [];
+    if (!logs.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No logs found for the selected filters.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Flow</th><th>Event</th><th>Status</th><th>Severity</th><th>Order</th><th>Duration</th></tr>
+        </thead>
+        <tbody>
+          ${logs
+            .map((l) => {
+              const flow = `${l.source_system || "?"} → ${l.target_system || "?"}`;
+              const st = String(l.status || "");
+              const sev = String(l.severity || "");
+              return `<tr>
+              <td>${fmtDate(l.created_at)}</td>
+              <td>${escapeHtml(flow)}</td>
+              <td>${escapeHtml(String(l.event_type || ""))}</td>
+              <td><span class="badge ${escapeHtml(st)}">${escapeHtml(st)}</span></td>
+              <td><span class="badge ${escapeHtml(sev)}">${escapeHtml(sev)}</span></td>
+              <td class="mono">${shortId(l.order_id)}</td>
+              <td>${l.duration_ms != null ? `${l.duration_ms}ms` : "—"}</td>
+            </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load logs.", "error");
+  }
+}
+
+/** Transactions sub-tab */
+async function loadTransactionHistory() {
+  const container = $("transactions-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading transactions…</p>';
+  try {
+    const state = $("txn-state-filter") ? $("txn-state-filter").value : "";
+    let qs = "?limit=50&offset=0";
+    if (state) qs += `&state=${state}`;
+    const data = await api("GET", `/api/orders/admin/logs/transactions${qs}`);
+    const txns = data.transactions || [];
+    if (!txns.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No transactions found.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Saga ID</th><th>Order</th><th>State</th><th>Steps</th><th>Started</th><th>Updated</th></tr>
+        </thead>
+        <tbody>
+          ${txns
+            .map(
+              (t) => `<tr>
+            <td class="mono">${shortId(t.saga_id)}</td>
+            <td class="mono">${shortId(t.order_id)}</td>
+            <td><span class="badge ${t.state || ""}">${t.state || "-"}</span></td>
+            <td>${t.current_step || "-"}${t.total_steps ? "/" + t.total_steps : ""}</td>
+            <td>${fmtDate(t.created_at)}</td>
+            <td>${fmtDate(t.updated_at)}</td>
+          </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load transactions.", "error");
+  }
+}
+
+/** Audit Trail sub-tab */
+async function loadAuditTrail() {
+  const container = $("audit-trail-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading audit trail…</p>';
+  try {
+    const entity = $("audit-entity-filter")
+      ? $("audit-entity-filter").value
+      : "";
+    const hours = $("audit-hours-filter")
+      ? $("audit-hours-filter").value
+      : "24";
+    let qs = `?hours=${hours}&limit=100&offset=0`;
+    if (entity) qs += `&entity_type=${entity}`;
+    const data = await api("GET", `/api/orders/admin/logs/audit${qs}`);
+    const entries = data.entries || data.audit_trail || [];
+    if (!entries.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No audit entries found.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Entity</th><th>Action</th><th>Actor</th><th>Order</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+          ${entries
+            .map(
+              (e) => `<tr>
+            <td>${fmtDate(e.created_at || e.timestamp)}</td>
+            <td>${escapeHtml(e.entity_type || "-")}</td>
+            <td>${escapeHtml(e.action || "-")}</td>
+            <td>${escapeHtml(e.actor_type || "-")}${e.actor_id ? " #" + e.actor_id : ""}</td>
+            <td class="mono">${shortId(e.order_id || e.entity_id)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(JSON.stringify(e.details || {}))}">${escapeHtml(truncate(JSON.stringify(e.details || {}), 60))}</td>
+          </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load audit trail.", "error");
+  }
+}
+
+/** Error Summary sub-tab */
+async function loadErrorSummary() {
+  const container = $("error-summary-content");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading error summary…</p>';
+  try {
+    const data = await api(
+      "GET",
+      "/api/orders/admin/logs/errors/summary?hours=24",
+    );
+    const summary = data.summary || data;
+
+    const byTarget = summary.by_target || summary.by_system || {};
+    const bySeverity = summary.by_severity || {};
+    const totalErrors = summary.total_errors || 0;
+    const recentErrors = summary.recent_errors || [];
+
+    container.innerHTML = `
+      <div class="stats-grid" style="margin-bottom: 20px">
+        <div class="stat-card"><div class="stat-value" style="color: var(--danger)">${totalErrors}</div><div class="stat-label">Total Errors (24h)</div></div>
+        ${Object.entries(byTarget)
+          .map(
+            ([sys, count]) =>
+              `<div class="stat-card"><div class="stat-value">${count}</div><div class="stat-label">${sys.toUpperCase()} Errors</div></div>`,
+          )
+          .join("")}
+        ${Object.entries(bySeverity)
+          .map(
+            ([sev, count]) =>
+              `<div class="stat-card"><div class="stat-value">${count}</div><div class="stat-label">${sev}</div></div>`,
+          )
+          .join("")}
+      </div>
+      ${totalErrors === 0 ? '<div class="no-data-message"><p>No errors in the last 24 hours — all systems operating normally.</p></div>' : ""}
+      ${
+        recentErrors.length
+          ? `
+        <h4 style="margin: 12px 0 8px">Recent Errors</h4>
+        <table>
+          <thead><tr><th>Time</th><th>System</th><th>Event</th><th>Severity</th><th>Message</th></tr></thead>
+          <tbody>
+            ${recentErrors
+              .map(
+                (e) => `<tr>
+              <td>${fmtDate(e.created_at)}</td>
+              <td>${escapeHtml(e.target_system || e.source_system || "-")}</td>
+              <td>${escapeHtml(e.event_type || "-")}</td>
+              <td><span class="badge ${e.severity || ""}">${e.severity || "-"}</span></td>
+              <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(e.error_message || "-")}</td>
+            </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>`
+          : ""
+      }`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load error summary.", "error");
+  }
+}
+
+/** Helper: truncate string */
+function truncate(str, len) {
+  return str.length > len ? str.slice(0, len) + "…" : str;
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  CLIENT: DASHBOARD                                        */
+/* ══════════════════════════════════════════════════════════ */
+let _trackCardOrderId = null;
+
+function updateTrackCard(order, opts = {}) {
+  const orderEl = $("track-card-order");
+  const statusEl = $("track-card-status");
+  const bar = $("track-progress-bar");
+  if (!orderEl || !statusEl || !bar) return;
+
+  const orderId = order?.order_id || "—";
+  const status = String(order?.status || opts.status || "Awaiting updates");
+  _trackCardOrderId = order?.order_id || null;
+
+  orderEl.textContent = orderId;
+  statusEl.textContent = status.replace(/_/g, " ");
+  statusEl.className = `badge ${status}`;
+  bar.style.width = `${statusToPct(status)}%`;
+}
+
+async function loadClientDashboard() {
+  const recentWrap = $("client-recent-orders");
+  if (!recentWrap) return;
+
+  recentWrap.innerHTML = '<p class="muted">Loading…</p>';
+  try {
+    const data = await api("GET", "/api/orders/?limit=5");
+    const orders = data.orders || [];
+    if (!orders.length) {
+      recentWrap.innerHTML =
+        '<div class="no-data-message"><p>No orders yet.</p></div>';
+      updateTrackCard(null);
+      return;
+    }
+
+    recentWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Recipient</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders
+            .map(
+              (o) => `
+            <tr>
+              <td class="mono">${shortId(o.order_id)}</td>
+              <td>${escapeHtml(o.recipient_name || "—")}</td>
+              <td><span class="badge ${escapeHtml(o.status)}">${escapeHtml(
+                String(o.status || ""),
+              )}</span></td>
+              <td>${fmtDate(o.created_at)}</td>
+            </tr>
+          `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+
+    // Live tracking card: focus newest order
+    const latest = orders[0];
+    updateTrackCard(latest);
+
+    // Connect live tracking for the card (keeps it “real-time”)
+    if (latest?.order_id) {
+      connectTrackingWs(latest.order_id);
+    }
+  } catch (e) {
+    recentWrap.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load dashboard.", "error");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  DRIVER: ROUTE MAP                                        */
+/* ══════════════════════════════════════════════════════════ */
+async function loadRouteMap() {
+  const label = document.querySelector("#route-map-tab .mini-map-label");
+  if (!label) return;
+  label.textContent = "Loading route…";
+  try {
+    const data = await api(
+      "GET",
+      `/api/tracking/manifests/driver/${currentUser.id}`,
+    );
+    const manifests = data.manifests || data || [];
+    const routeData = manifests.find((m) => m.route_data)?.route_data || null;
+    const totalStops = manifests.reduce(
+      (acc, m) => acc + ((m.items || []).length || 0),
+      0,
+    );
+    label.textContent = routeData
+      ? `Route available • ${totalStops} stops`
+      : `No route data • ${totalStops} stops`;
+  } catch (e) {
+    label.textContent = "Unable to load route";
+    toast(e.message || "Failed to load route.", "error");
   }
 }
 
@@ -695,14 +1384,11 @@ async function retryFailedEvent(eventId) {
       "POST",
       `/api/orders/admin/retry-event/${eventId}`,
     );
-    alert(
-      result.success
-        ? "Retry triggered successfully!"
-        : `Retry failed: ${result.error}`,
-    );
+    if (result.success) toast("Retry triggered successfully!", "success");
+    else toast(`Retry failed: ${result.error || "Unknown error"}`, "error");
     loadFailedMessages();
   } catch (e) {
-    alert(`Error: ${e.message}`);
+    toast(e.message || "Retry failed.", "error");
   }
 }
 
@@ -786,7 +1472,7 @@ async function openEditUser(userId) {
     $("eu-result").innerHTML = "";
     showModal("edit-user-modal");
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to load user.", "error");
   }
 }
 
@@ -813,7 +1499,7 @@ async function toggleUserStatus(userId, isActive) {
     await api("PATCH", `/api/auth/users/${userId}/status`);
     loadUsers();
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to update user status.", "error");
   }
 }
 
@@ -850,9 +1536,114 @@ async function loadAllOrders(page) {
 }
 
 /* ══════════════════════════════════════════════════════════ */
-/*  ADMIN: INTEGRATION EVENTS                                */
+/*  ADMIN: INTEGRATION EVENTS (Integration Monitor tab)      */
 /* ══════════════════════════════════════════════════════════ */
 async function loadIntegrationEvents() {
+  // Load all three sections in parallel
+  loadIntegrationHealthCards();
+  loadIntegrationFailedMessages();
+  loadIntegrationEventLog();
+}
+
+/** Integration Health Cards (top of Integration Monitor) */
+async function loadIntegrationHealthCards() {
+  const container = $("integration-health-cards");
+  if (!container) return;
+  try {
+    const data = await api("GET", "/api/orders/admin/integration-status");
+    const integrations = data.integrations || {};
+    const systemLabels = {
+      cms: { name: "CMS", proto: "SOAP/XML" },
+      ros: { name: "ROS", proto: "REST/JSON" },
+      wms: { name: "WMS", proto: "TCP/IP" },
+    };
+    container.innerHTML =
+      Object.entries(integrations)
+        .map(([key, info]) => {
+          const label = systemLabels[key] || {
+            name: key.toUpperCase(),
+            proto: "Unknown",
+          };
+          const dotColor =
+            info.status === "healthy"
+              ? "#27ae60"
+              : info.status === "degraded"
+                ? "#f39c12"
+                : "#e74c3c";
+          return `
+        <div class="integration-card" style="min-width:200px">
+          <div class="integration-card-header">
+            <h4>${label.name} <small style="color:#888;font-weight:normal">(${label.proto})</small></h4>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor}" title="${info.status}"></span>
+          </div>
+          <div class="integration-stats">
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.response_time_ms || "-"}<small>ms</small></div>
+              <div class="integration-stat-label">Response</div>
+            </div>
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.success_rate_24h ? info.success_rate_24h.toFixed(0) + "%" : "-"}</div>
+              <div class="integration-stat-label">Success</div>
+            </div>
+            <div class="integration-stat">
+              <div class="integration-stat-value">${info.total_calls_24h || 0}</div>
+              <div class="integration-stat-label">Calls</div>
+            </div>
+          </div>
+        </div>`;
+        })
+        .join("") || '<div class="no-data-message">No integration data</div>';
+  } catch (e) {
+    container.innerHTML = `<div class="no-data-message"><p>${e.message}</p></div>`;
+  }
+}
+
+/** Failed Messages section in Integration Monitor */
+async function loadIntegrationFailedMessages() {
+  const container = $("integration-failed-list");
+  const countBadge = $("int-failed-count");
+  if (!container) return;
+  try {
+    const data = await api("GET", "/api/orders/admin/failed-messages?limit=10");
+    const messages = data.messages || [];
+    if (countBadge) {
+      countBadge.textContent = data.count || 0;
+      countBadge.style.display = data.count > 0 ? "inline" : "none";
+    }
+    if (!messages.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No failed messages — all systems operating normally.</p></div>';
+      return;
+    }
+    container.innerHTML = messages
+      .map(
+        (msg) => `
+      <div class="failed-message-item" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0">
+        <div style="flex:1">
+          <strong>${msg.event_type || "Unknown"}</strong>
+          <span class="badge failed" style="margin-left:6px">${msg.target_system}</span>
+          <div style="font-size:0.82rem;color:#888;margin-top:2px">
+            Order: ${shortId(msg.order_id)} · Retries: ${msg.retry_count}/${msg.max_retries}
+            ${msg.error_message ? ` · <span style="color:var(--danger)">${escapeHtml(msg.error_message.slice(0, 80))}</span>` : ""}
+          </div>
+        </div>
+        <button class="btn-small btn-warning" onclick="retryFailedEvent('${msg.event_id}')" ${!msg.can_retry ? "disabled" : ""}>
+          ${msg.can_retry ? "Retry" : "Max Retries"}
+        </button>
+      </div>
+    `,
+      )
+      .join("");
+  } catch (e) {
+    container.innerHTML = `<div class="no-data-message"><p>${e.message}</p></div>`;
+  }
+}
+
+/** Event Log table in Integration Monitor */
+async function loadIntegrationEventLog() {
+  const container = $("integration-events-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading events…</p>';
   try {
     const status = $("int-status-filter") ? $("int-status-filter").value : "";
     const source = $("int-source-filter") ? $("int-source-filter").value : "";
@@ -862,11 +1653,11 @@ async function loadIntegrationEvents() {
     const data = await api("GET", `/api/tracking/integration-events${qs}`);
     const events = data.events || [];
     if (!events.length) {
-      $("integration-events-list").innerHTML =
-        "<p>No integration events found.</p>";
+      container.innerHTML =
+        "<div class='no-data-message'><p>No integration events found.</p></div>";
       return;
     }
-    $("integration-events-list").innerHTML = `
+    container.innerHTML = `
       <table>
         <thead><tr><th>ID</th><th>Order</th><th>Source</th><th>Target</th><th>Type</th><th>Status</th><th>Retries</th><th>Time</th><th>Actions</th></tr></thead>
         <tbody>${events
@@ -888,8 +1679,7 @@ async function loadIntegrationEvents() {
           .join("")}</tbody>
       </table>`;
   } catch (e) {
-    $("integration-events-list").innerHTML =
-      `<p class="error">${e.message}</p>`;
+    container.innerHTML = `<p class="error">${e.message}</p>`;
   }
 }
 
@@ -898,7 +1688,7 @@ async function retryIntegration(eventId) {
     await api("POST", `/api/tracking/integration-events/${eventId}/retry`);
     loadIntegrationEvents();
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to retry integration event.", "error");
   }
 }
 
@@ -1083,7 +1873,7 @@ async function viewOrderDetail(orderId) {
       </table>`;
     showModal("order-detail-modal");
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to load order details.", "error");
   }
 }
 
@@ -1103,7 +1893,7 @@ async function openAssignDriver(orderId) {
       .join("");
     showModal("assign-driver-modal");
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to load drivers.", "error");
   }
 }
 
@@ -1132,7 +1922,7 @@ async function updateOrderStatus(orderId, status) {
     await api("PATCH", `/api/orders/${orderId}/status`, { status });
     if (currentTabLoad) currentTabLoad();
   } catch (e) {
-    alert(e.message);
+    toast(e.message || "Failed to update order status.", "error");
   }
 }
 
@@ -1255,10 +2045,35 @@ function connectTrackingWs(orderId) {
   trackingWs.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === "pong") return;
-    const div = document.createElement("div");
-    div.className = "live-event";
-    div.innerHTML = `<strong>${(data.event_type || "").replace(/_/g, " ")}</strong> – ${data.description || ""} <span style="color:#888;font-size:0.8rem">${data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : ""}</span>`;
-    $("live-updates").prepend(div);
+
+    // Notifications slide-over
+    pushNotification({
+      title: "Tracking update",
+      message: `${(data.event_type || "").replace(/_/g, " ")}: ${data.description || ""}`,
+      type: "info",
+      timestamp: data.timestamp || new Date().toISOString(),
+    });
+
+    // Tracking tab live feed (if visible)
+    const live = $("live-updates");
+    if (live) {
+      const div = document.createElement("div");
+      div.className = "live-event";
+      div.innerHTML = `<strong>${(data.event_type || "").replace(/_/g, " ")}</strong> – ${data.description || ""} <span style="color:#888;font-size:0.8rem">${data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : ""}</span>`;
+      live.prepend(div);
+    }
+
+    // Client dashboard live tracking card
+    if (
+      _trackCardOrderId &&
+      data.order_id &&
+      data.order_id === _trackCardOrderId
+    ) {
+      updateTrackCard(
+        { order_id: data.order_id, status: data.event_type || "processing" },
+        { status: data.event_type || "processing" },
+      );
+    }
   };
   trackingWs.onclose = () => {
     $("ws-status").className = "ws-badge disconnected";
@@ -1291,7 +2106,12 @@ async function loadManifests() {
       `/api/tracking/manifests/driver/${currentUser.id}`,
     );
     const manifests = data.manifests || data || [];
-    const container = $("driver-manifests");
+    const containers = [
+      $("driver-manifests"),
+      $("driver-manifests-status"),
+    ].filter(Boolean);
+    if (!containers.length) return;
+    const setHtml = (html) => containers.forEach((c) => (c.innerHTML = html));
 
     // Calculate summary stats
     let total = 0,
@@ -1324,8 +2144,9 @@ async function loadManifests() {
     checkDriverNotifications(manifests);
 
     if (!manifests.length) {
-      container.innerHTML =
-        '<p class="empty-state">No manifests assigned for today. Check with your admin.</p>';
+      setHtml(
+        '<p class="empty-state">No manifests assigned for today. Check with your admin.</p>',
+      );
       return;
     }
 
@@ -1335,7 +2156,7 @@ async function loadManifests() {
     );
     await fetchOrderDetails(orderIds);
 
-    container.innerHTML = manifests
+    const html = manifests
       .map(
         (m) => `
       <div class="manifest-card">
@@ -1370,8 +2191,12 @@ async function loadManifests() {
     `,
       )
       .join("");
+    setHtml(html);
   } catch (e) {
-    $("driver-manifests").innerHTML = `<p class="error">${e.message}</p>`;
+    [$("driver-manifests"), $("driver-manifests-status")]
+      .filter(Boolean)
+      .forEach((c) => (c.innerHTML = `<p class="error">${e.message}</p>`));
+    toast(e.message || "Failed to load manifests.", "error");
   }
 }
 
@@ -1732,9 +2557,11 @@ async function updateProfile() {
     if ($("profile-phone").value) body.phone = $("profile-phone").value;
     const u = await api("PUT", "/api/auth/me", body);
     currentUser = { ...currentUser, ...u };
-    localStorage.setItem("swifttrack_user", JSON.stringify(currentUser));
-    $("user-info").textContent =
-      `${currentUser.full_name} (${currentUser.role})`;
+    _authStorage = getActiveAuthStorage();
+    _authStorage.setItem(AUTH_KEYS.user, JSON.stringify(currentUser));
+    $("user-info").textContent = currentUser.full_name || currentUser.username;
+    const roleBadge = $("user-role-badge");
+    if (roleBadge) roleBadge.textContent = currentUser.role;
     $("profile-result").innerHTML = '<p class="success">Profile updated!</p>';
   } catch (e) {
     $("profile-result").innerHTML = `<p class="error">${e.message}</p>`;

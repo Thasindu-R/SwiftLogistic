@@ -41,6 +41,7 @@ class ManifestCreate(BaseModel):
     driver_id: int
     date: str = Field(...)
     order_ids: list[str]
+    route_data: Optional[dict | str] = None  # JSON route from ROS
 
 
 class DeliveryItemUpdate(BaseModel):

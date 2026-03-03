@@ -26,7 +26,7 @@ class Settings:
     # ── JWT / Security ───────────────────────────────────────
     JWT_SECRET: str = os.getenv("JWT_SECRET", "change_me_in_production")
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_EXPIRATION_MINUTES", "60"))
+    JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_EXPIRATION_MINUTES", "1440"))
 
     # ── Inter-service URLs (used mainly by api-gateway) ──────
     AUTH_SERVICE_URL: str = os.getenv(

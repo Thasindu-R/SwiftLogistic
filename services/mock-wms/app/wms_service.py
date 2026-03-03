@@ -34,6 +34,29 @@ logger = logging.getLogger("mock-wms")
 RABBITMQ_URL = "amqp://guest:guest@rabbitmq:5672/"
 TCP_PORT = 9000
 
+
+async def connect_rabbitmq_with_retry(
+    url: str,
+    *,
+    retries: int = 30,
+    delay_seconds: float = 2.0,
+) -> aio_pika.abc.AbstractRobustConnection:
+    """Connect to RabbitMQ with retry to avoid startup race conditions."""
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return await aio_pika.connect_robust(url)
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                "RabbitMQ not ready (attempt %d/%d): %s",
+                attempt,
+                retries,
+                e,
+            )
+            await asyncio.sleep(delay_seconds)
+    raise RuntimeError(f"Failed to connect to RabbitMQ after {retries} attempts: {last_error}")
+
 # ── In-memory warehouse ──────────────────────────────────────
 warehouse: dict[str, dict] = {}  # order_id → package info
 
@@ -188,7 +211,7 @@ async def lifespan(application: FastAPI):
 
     # Connect to RabbitMQ
     try:
-        connection = await aio_pika.connect_robust(RABBITMQ_URL)
+        connection = await connect_rabbitmq_with_retry(RABBITMQ_URL)
         channel = await connection.channel()
         exchange = await channel.declare_exchange("swifttrack.orders", aio_pika.ExchangeType.TOPIC, durable=True)
         queue = await channel.declare_queue("order.wms", durable=True)

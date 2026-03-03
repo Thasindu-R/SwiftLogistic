@@ -17,6 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from shared.common.config import settings
+from shared.common.errors import register_exception_handlers
+from shared.common.middleware import setup_security_middleware
 
 from .routes import auth_router, orders_router, tracking_router
 
@@ -41,14 +43,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ─────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# ── Security Middleware (CORS, Rate Limiting, Logging, Headers) ──
+setup_security_middleware(
+    app,
+    enable_rate_limiting=True,
+    enable_request_logging=True,
+    enable_security_headers=True,
 )
+
+# ── Exception Handlers (standardised error responses) ────────
+register_exception_handlers(app)
 
 # ── Route registration ───────────────────────────────────────
 app.include_router(auth_router)

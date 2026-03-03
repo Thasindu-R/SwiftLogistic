@@ -13,8 +13,8 @@ Provides:
 
 Usage:
     orchestrator = IntegrationOrchestrator(
-        cms_url="http://mock-cms:8005",
-        ros_url="http://mock-ros:8004",
+        cms_url="http://mock-cms:8004",
+        ros_url="http://mock-ros:8005",
         wms_host="mock-wms",
         wms_port=9000
     )

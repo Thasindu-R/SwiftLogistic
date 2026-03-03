@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.common.config import settings
 from shared.common.database import init_db
+from shared.common.errors import register_exception_handlers
+from shared.common.middleware import SecurityHeadersMiddleware, RequestLoggingMiddleware
 
 from .routes import router
 
@@ -42,6 +44,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+
+# ── Exception Handlers ───────────────────────────────────────
+register_exception_handlers(app)
 
 app.include_router(router)
 

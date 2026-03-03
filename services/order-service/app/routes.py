@@ -65,7 +65,7 @@ async def create_order(
     # Trigger the order saga asynchronously (publishes to RabbitMQ)
     try:
         saga = OrderSaga(
-            {
+            order_data={
                 "order_id": order_uuid,
                 "client_id": int(current_user["sub"]),
                 "pickup_address": payload.pickup_address,
@@ -75,13 +75,18 @@ async def create_order(
                 "priority": payload.priority,
                 "recipient_name": payload.recipient_name,
                 "recipient_phone": payload.recipient_phone,
-            }
+            },
+            db=db,
         )
-        await saga.execute()
+        saga_result = await saga.execute()
         order.status = "processing"
         await db.flush()
         await db.refresh(order)
-        logger.info("Order saga started for %s", order_uuid)
+        logger.info(
+            "Order saga completed for %s – state=%s",
+            order_uuid,
+            saga_result.get("state", "unknown"),
+        )
     except Exception as e:
         logger.error("Saga failed to start for %s: %s", order_uuid, e)
 

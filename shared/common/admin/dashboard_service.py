@@ -495,7 +495,7 @@ class AdminDashboardService:
         try:
             from shared.common.rabbitmq import rabbitmq_client
             
-            if rabbitmq_client._connection and not rabbitmq_client._connection.is_closed:
+            if rabbitmq_client.connection and not rabbitmq_client.connection.is_closed:
                 return SystemHealth.HEALTHY
             
             # Try to connect
