@@ -192,7 +192,17 @@ async function api(method, path, body = null) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${API_BASE}${path}`, opts);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+  if (!res.ok) {
+    // Auto-logout on expired / invalid token
+    if (res.status === 401 && token) {
+      clearAuth();
+      token = null;
+      currentUser = null;
+      showLogin();
+      toast("Session expired — please sign in again.", "warning");
+    }
+    throw new Error(data.detail || JSON.stringify(data));
+  }
   return data;
 }
 
@@ -379,66 +389,68 @@ function showDashboard() {
 }
 
 /* SVG icon fragments for sidebar nav */
+const _si =
+  'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const NAV_ICONS = {
-  "admin-dashboard":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
-  analytics:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="18" cy="7" r="1"/></svg>',
-  "system-logs":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>',
-  "client-dashboard":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>',
-  "driver-dashboard":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-  "route-map":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>',
-  "update-status":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
-  users:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
-  "all-orders":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
-  orders:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>',
-  "new-order":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-  manifests:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-  integration:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-  tracking:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  "driver-orders":
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-  driver:
-    '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  "admin-dashboard": `<svg ${_si}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+  analytics: `<svg ${_si}><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="18" cy="7" r="1"/></svg>`,
+  "system-status": `<svg ${_si}><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+  "message-queue": `<svg ${_si}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>`,
+  "integration-log": `<svg ${_si}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  "failed-messages": `<svg ${_si}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  "system-logs": `<svg ${_si}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
+  "client-dashboard": `<svg ${_si}><path d="M3 10l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>`,
+  "driver-dashboard": `<svg ${_si}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  "route-map": `<svg ${_si}><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>`,
+  "update-status": `<svg ${_si}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+  users: `<svg ${_si}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+  "all-orders": `<svg ${_si}><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`,
+  orders: `<svg ${_si}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>`,
+  "new-order": `<svg ${_si}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  manifests: `<svg ${_si}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  integration: `<svg ${_si}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  tracking: `<svg ${_si}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  "track-delivery": `<svg ${_si}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  "driver-orders": `<svg ${_si}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  "my-manifest": `<svg ${_si}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  "update-delivery": `<svg ${_si}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+  driver: `<svg ${_si}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
 };
 
 const TAB_CONFIG = {
   admin: [
     { id: "admin-dashboard", label: "Dashboard", load: loadAdminDashboard },
-    { id: "all-orders", label: "Orders", load: loadAllOrders },
+    { id: "system-status", label: "System Status", load: loadSystemStatusTab },
+    { id: "message-queue", label: "Message Queue", load: loadMessageQueue },
     {
-      id: "integration",
-      label: "Integration Monitor",
-      load: loadIntegrationEvents,
+      id: "integration-log",
+      label: "Integration Log",
+      load: loadIntegrationLog,
     },
-    { id: "system-logs", label: "System Logs", load: loadSystemLogs },
+    {
+      id: "failed-messages",
+      label: "Failed Messages",
+      load: loadFailedMessagesTab,
+    },
+    { id: "all-orders", label: "All Orders", load: loadAllOrders },
     { id: "users", label: "Users", load: loadUsers },
     { id: "manifests", label: "Manifests", load: loadAllManifests },
-    { id: "analytics", label: "Analytics", load: loadAnalytics },
   ],
   client: [
     { id: "client-dashboard", label: "Dashboard", load: loadClientDashboard },
-    { id: "orders", label: "My Orders", load: loadOrders },
-    { id: "tracking", label: "Track Shipment", load: null },
-    { id: "new-order", label: "Create Order", load: null },
+    { id: "new-order", label: "New Order", load: null },
+    { id: "orders", label: "My Orders", load: loadClientOrders },
+    { id: "track-delivery", label: "Track Delivery", load: null },
   ],
   driver: [
-    { id: "driver-dashboard", label: "Dashboard", load: loadManifests },
-    { id: "driver-orders", label: "My Deliveries", load: loadDriverOrders },
-    { id: "route-map", label: "Route Map", load: loadRouteMap },
-    { id: "update-status", label: "Update Status", load: loadManifests },
+    { id: "driver-dashboard", label: "Dashboard", load: loadDriverDashboard },
+    { id: "my-manifest", label: "My Manifest", load: loadMyManifest },
+    {
+      id: "update-delivery",
+      label: "Update Delivery",
+      load: loadUpdateDelivery,
+    },
+    { id: "route-map", label: "Route", load: loadRouteView },
   ],
 };
 
@@ -450,7 +462,7 @@ function buildTabs() {
   const tabs = TAB_CONFIG[currentUser.role] || TAB_CONFIG.client;
   tabs.forEach((t, i) => {
     const btn = document.createElement("button");
-    btn.className = "tab" + (i === 0 ? " active" : "");
+    btn.className = "nav-tab" + (i === 0 ? " active" : "");
     const icon = NAV_ICONS[t.id] || "";
     btn.innerHTML = icon + `<span>${t.label}</span>`;
     btn.onclick = () => switchTab(t.id, btn, t.load);
@@ -458,7 +470,7 @@ function buildTabs() {
   });
   // Activate first tab
   const first = tabs[0];
-  switchTab(first.id, nav.querySelector(".tab"), first.load);
+  switchTab(first.id, nav.querySelector(".nav-tab"), first.load);
 }
 
 function switchTab(tabId, btnEl, loadFn) {
@@ -466,7 +478,7 @@ function switchTab(tabId, btnEl, loadFn) {
     .querySelectorAll(".tab-content")
     .forEach((el) => (el.style.display = "none"));
   document
-    .querySelectorAll(".tab")
+    .querySelectorAll(".nav-tab")
     .forEach((el) => el.classList.remove("active"));
   const panel = $(`${tabId}-tab`);
   if (panel) panel.style.display = "block";
@@ -860,8 +872,20 @@ async function loadClientDashboard() {
 
   recentWrap.innerHTML = '<p class="muted">Loading…</p>';
   try {
-    const data = await api("GET", "/api/orders/?limit=5");
+    const data = await api("GET", "/api/orders/");
     const orders = data.orders || [];
+
+    // Stat cards
+    const submitted = orders.length;
+    const transit = orders.filter((o) => o.status === "in_transit").length;
+    const delivered = orders.filter((o) => o.status === "delivered").length;
+    const statSub = $("stat-submitted");
+    const statTr = $("stat-transit");
+    const statDel = $("stat-delivered");
+    if (statSub) statSub.textContent = submitted;
+    if (statTr) statTr.textContent = transit;
+    if (statDel) statDel.textContent = delivered;
+
     if (!orders.length) {
       recentWrap.innerHTML =
         '<div class="no-data-message"><p>No orders yet.</p></div>';
@@ -869,6 +893,8 @@ async function loadClientDashboard() {
       return;
     }
 
+    // Recent orders mini-table (last 3)
+    const recent = orders.slice(0, 3);
     recentWrap.innerHTML = `
       <table>
         <thead>
@@ -880,14 +906,14 @@ async function loadClientDashboard() {
           </tr>
         </thead>
         <tbody>
-          ${orders
+          ${recent
             .map(
               (o) => `
-            <tr>
+            <tr style="cursor:pointer" onclick="viewOrderDetail('${o.order_id}')">
               <td class="mono">${shortId(o.order_id)}</td>
               <td>${escapeHtml(o.recipient_name || "—")}</td>
               <td><span class="badge ${escapeHtml(o.status)}">${escapeHtml(
-                String(o.status || ""),
+                String(o.status || "").replace(/_/g, " "),
               )}</span></td>
               <td>${fmtDate(o.created_at)}</td>
             </tr>
@@ -913,30 +939,477 @@ async function loadClientDashboard() {
 }
 
 /* ══════════════════════════════════════════════════════════ */
-/*  DRIVER: ROUTE MAP                                        */
+/*  DRIVER: DASHBOARD                                        */
 /* ══════════════════════════════════════════════════════════ */
-async function loadRouteMap() {
-  const label = document.querySelector("#route-map-tab .mini-map-label");
-  if (!label) return;
-  label.textContent = "Loading route…";
+let _driverManifestCache = null;
+
+async function _fetchDriverManifests() {
+  const data = await api(
+    "GET",
+    `/api/tracking/manifests/driver/${currentUser.id}`,
+  );
+  const manifests = data.manifests || data || [];
+  _driverManifestCache = manifests;
+  // Prefetch order details
+  const orderIds = manifests.flatMap((m) =>
+    (m.items || []).map((i) => i.order_id),
+  );
+  await fetchOrderDetails(orderIds);
+  return manifests;
+}
+
+async function loadDriverDashboard() {
   try {
-    const data = await api(
-      "GET",
-      `/api/tracking/manifests/driver/${currentUser.id}`,
-    );
-    const manifests = data.manifests || data || [];
-    const routeData = manifests.find((m) => m.route_data)?.route_data || null;
-    const totalStops = manifests.reduce(
-      (acc, m) => acc + ((m.items || []).length || 0),
-      0,
-    );
-    label.textContent = routeData
-      ? `Route available • ${totalStops} stops`
-      : `No route data • ${totalStops} stops`;
+    const manifests = await _fetchDriverManifests();
+
+    // Calculate stats
+    let total = 0,
+      completed = 0,
+      pending = 0,
+      failed = 0;
+    manifests.forEach((m) => {
+      (m.items || []).forEach((item) => {
+        total++;
+        if (item.status === "delivered") completed++;
+        else if (item.status === "failed") failed++;
+        else pending++;
+      });
+    });
+
+    // Update stat cards
+    if ($("ds-total")) $("ds-total").textContent = total;
+    if ($("ds-completed")) $("ds-completed").textContent = completed;
+    if ($("ds-pending")) $("ds-pending").textContent = pending;
+    if ($("ds-failed")) $("ds-failed").textContent = failed;
+
+    // Check urgent notifications
+    checkDriverNotifications(manifests);
+
+    // Today's manifest preview (first 3 stops)
+    const previewEl = $("driver-manifest-preview");
+    if (previewEl) {
+      const allItems = manifests.flatMap((m) =>
+        (m.items || []).map((item, idx) => ({
+          ...item,
+          seq: item.sequence || idx + 1,
+        })),
+      );
+      allItems.sort((a, b) => a.seq - b.seq);
+      const first3 = allItems.slice(0, 3);
+      if (!first3.length) {
+        previewEl.innerHTML =
+          '<p class="muted">No deliveries assigned for today.</p>';
+      } else {
+        previewEl.innerHTML = first3
+          .map((item) => {
+            const order = orderDetailsCache[item.order_id] || {};
+            return `
+            <div class="manifest-preview-item">
+              <span class="manifest-preview-seq">${item.seq}</span>
+              <div class="manifest-preview-info">
+                <div class="manifest-preview-name">${escapeHtml(order.recipient_name || "Customer")}</div>
+                <div class="manifest-preview-addr">${escapeHtml(order.delivery_address || "—")}</div>
+              </div>
+              <span class="badge ${item.status}">${item.status.replace(/_/g, " ")}</span>
+            </div>`;
+          })
+          .join("");
+      }
+    }
   } catch (e) {
-    label.textContent = "Unable to load route";
+    toast(e.message || "Failed to load driver dashboard.", "error");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  DRIVER: MY MANIFEST                                      */
+/* ══════════════════════════════════════════════════════════ */
+async function loadMyManifest() {
+  const container = $("manifest-stops-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading manifest…</p>';
+  try {
+    const manifests = _driverManifestCache || (await _fetchDriverManifests());
+
+    const allItems = manifests.flatMap((m) =>
+      (m.items || []).map((item, idx) => ({
+        ...item,
+        seq: item.sequence || idx + 1,
+      })),
+    );
+    allItems.sort((a, b) => a.seq - b.seq);
+
+    if (!allItems.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No deliveries assigned for today.</p></div>';
+      return;
+    }
+
+    container.innerHTML = allItems
+      .map((item) => {
+        const order = orderDetailsCache[item.order_id] || {};
+        return `
+        <div class="manifest-stop-card">
+          <div class="manifest-stop-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <span class="manifest-stop-seq">${item.seq}</span>
+            <div class="manifest-stop-info">
+              <div class="manifest-stop-name">${escapeHtml(order.recipient_name || "Customer")}</div>
+              <div class="manifest-stop-addr">${escapeHtml(order.delivery_address || "—")}</div>
+            </div>
+            <span class="badge ${item.status}">${item.status.replace(/_/g, " ")}</span>
+            ${order.priority === "urgent" ? '<span class="badge urgent">URGENT</span>' : ""}
+            ${order.priority === "high" ? '<span class="badge high">HIGH</span>' : ""}
+            <span class="manifest-stop-chevron">▸</span>
+          </div>
+          <div class="manifest-stop-detail">
+            <table style="box-shadow:none;margin:0">
+              <tr><td><strong>Order ID</strong></td><td class="mono">${shortId(item.order_id)}</td></tr>
+              <tr><td><strong>Pickup</strong></td><td>${escapeHtml(order.pickup_address || "—")}</td></tr>
+              <tr><td><strong>Package</strong></td><td>${escapeHtml(order.package_description || "—")} (${order.package_weight || 0} kg)</td></tr>
+              <tr><td><strong>Phone</strong></td><td>${escapeHtml(order.recipient_phone || "—")}</td></tr>
+              <tr><td><strong>Priority</strong></td><td><span class="badge ${order.priority || "normal"}">${order.priority || "normal"}</span></td></tr>
+              <tr><td><strong>Notes</strong></td><td>${escapeHtml(order.notes || "None")}</td></tr>
+              ${item.proof_of_delivery ? '<tr><td><strong>POD</strong></td><td style="color:var(--success)">✓ Proof of delivery captured</td></tr>' : ""}
+            </table>
+          </div>
+        </div>`;
+      })
+      .join("");
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+    toast(e.message || "Failed to load manifest.", "error");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  DRIVER: UPDATE DELIVERY                                  */
+/* ══════════════════════════════════════════════════════════ */
+let _udSignatureCanvas = null,
+  _udSignatureCtx = null,
+  _udIsDrawing = false,
+  _udPhotoData = null;
+
+async function loadUpdateDelivery() {
+  const select = $("ud-order-select");
+  if (!select) return;
+
+  // Populate dropdown with pending/in_transit/picked_up orders
+  try {
+    const manifests = _driverManifestCache || (await _fetchDriverManifests());
+    const items = manifests.flatMap((m) =>
+      (m.items || []).filter((i) =>
+        ["pending", "in_transit", "picked_up"].includes(i.status),
+      ),
+    );
+
+    select.innerHTML = '<option value="">— Select an order —</option>';
+    items.forEach((item) => {
+      const order = orderDetailsCache[item.order_id] || {};
+      const opt = document.createElement("option");
+      opt.value = item.order_id;
+      opt.textContent = `${shortId(item.order_id)} — ${order.recipient_name || "Customer"} (${item.status.replace(/_/g, " ")})`;
+      select.appendChild(opt);
+    });
+
+    $("ud-order-info").style.display = "none";
+    $("ud-result").innerHTML = "";
+  } catch (e) {
+    toast(e.message || "Failed to load orders.", "error");
+  }
+}
+
+async function loadUdOrderDetails() {
+  const orderId = $("ud-order-select").value;
+  const infoPanel = $("ud-order-info");
+  if (!orderId) {
+    infoPanel.style.display = "none";
+    return;
+  }
+
+  infoPanel.style.display = "block";
+  $("ud-status").value = "delivered";
+  $("ud-notes").value = "";
+  $("ud-result").innerHTML = "";
+  _udPhotoData = null;
+  toggleUdSections();
+
+  // Photo preview reset
+  const pp = $("ud-photo-preview");
+  if (pp)
+    pp.innerHTML = '<span class="photo-placeholder">No photo captured</span>';
+  const pi = $("ud-photo-input");
+  if (pi) pi.value = "";
+
+  // Init signature canvas
+  initUdSignatureCanvas();
+
+  // Show order details
+  const infoGrid = $("ud-info-grid");
+  try {
+    let order = orderDetailsCache[orderId];
+    if (!order || !order.recipient_name) {
+      order = await api("GET", `/api/orders/${orderId}`);
+      orderDetailsCache[orderId] = order;
+    }
+    infoGrid.innerHTML = `
+      <div class="delivery-info-item"><div class="delivery-info-label">Customer</div><div class="delivery-info-value">${escapeHtml(order.recipient_name || "N/A")}</div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Phone</div><div class="delivery-info-value">${escapeHtml(order.recipient_phone || "N/A")}</div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Address</div><div class="delivery-info-value">${escapeHtml(order.delivery_address || "N/A")}</div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Package</div><div class="delivery-info-value">${escapeHtml(order.package_description || "N/A")} (${order.package_weight || 0} kg)</div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Priority</div><div class="delivery-info-value"><span class="badge ${order.priority}">${order.priority || "normal"}</span></div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Notes</div><div class="delivery-info-value">${escapeHtml(order.notes || "None")}</div></div>
+    `;
+  } catch (e) {
+    infoGrid.innerHTML = '<p class="error">Could not load order details</p>';
+  }
+}
+
+function toggleUdSections() {
+  const status = $("ud-status").value;
+  const fail = $("ud-failure-section");
+  const pod = $("ud-pod-section");
+  if (fail) fail.style.display = status === "failed" ? "block" : "none";
+  if (pod) pod.style.display = status === "delivered" ? "block" : "none";
+}
+
+function toggleUdOther() {
+  const other = $("ud-failure-other");
+  if (other)
+    other.style.display =
+      $("ud-failure-reason").value === "Other" ? "block" : "none";
+}
+
+function initUdSignatureCanvas() {
+  _udSignatureCanvas = $("ud-signature-canvas");
+  if (!_udSignatureCanvas) return;
+  _udSignatureCtx = _udSignatureCanvas.getContext("2d");
+  clearUdSignature();
+  _udSignatureCanvas.onmousedown = (e) => {
+    _udIsDrawing = true;
+    _udSignatureCtx.beginPath();
+    _udSignatureCtx.moveTo(e.offsetX, e.offsetY);
+  };
+  _udSignatureCanvas.onmousemove = (e) => {
+    if (!_udIsDrawing) return;
+    _udSignatureCtx.lineTo(e.offsetX, e.offsetY);
+    _udSignatureCtx.strokeStyle = "#000";
+    _udSignatureCtx.lineWidth = 2;
+    _udSignatureCtx.lineCap = "round";
+    _udSignatureCtx.stroke();
+  };
+  _udSignatureCanvas.onmouseup = () => {
+    _udIsDrawing = false;
+  };
+  _udSignatureCanvas.onmouseout = () => {
+    _udIsDrawing = false;
+  };
+  _udSignatureCanvas.ontouchstart = (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = _udSignatureCanvas.getBoundingClientRect();
+    _udIsDrawing = true;
+    _udSignatureCtx.beginPath();
+    _udSignatureCtx.moveTo(t.clientX - r.left, t.clientY - r.top);
+  };
+  _udSignatureCanvas.ontouchmove = (e) => {
+    if (!_udIsDrawing) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = _udSignatureCanvas.getBoundingClientRect();
+    _udSignatureCtx.lineTo(t.clientX - r.left, t.clientY - r.top);
+    _udSignatureCtx.strokeStyle = "#000";
+    _udSignatureCtx.lineWidth = 2;
+    _udSignatureCtx.lineCap = "round";
+    _udSignatureCtx.stroke();
+  };
+  _udSignatureCanvas.ontouchend = () => {
+    _udIsDrawing = false;
+  };
+}
+
+function clearUdSignature() {
+  if (!_udSignatureCtx || !_udSignatureCanvas) return;
+  _udSignatureCtx.fillStyle = "#fff";
+  _udSignatureCtx.fillRect(
+    0,
+    0,
+    _udSignatureCanvas.width,
+    _udSignatureCanvas.height,
+  );
+}
+
+function getUdSignatureData() {
+  if (!_udSignatureCanvas) return null;
+  const d = _udSignatureCtx.getImageData(
+    0,
+    0,
+    _udSignatureCanvas.width,
+    _udSignatureCanvas.height,
+  );
+  const empty = d.data.every((v, i) => i % 4 === 3 || v >= 250);
+  if (empty) return null;
+  return _udSignatureCanvas.toDataURL("image/png");
+}
+
+function handleUdPhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _udPhotoData = e.target.result;
+    const preview = $("ud-photo-preview");
+    if (preview)
+      preview.innerHTML = `<img src="${_udPhotoData}" alt="Proof of delivery">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearUdPhoto() {
+  _udPhotoData = null;
+  const preview = $("ud-photo-preview");
+  if (preview)
+    preview.innerHTML =
+      '<span class="photo-placeholder">No photo captured</span>';
+  const input = $("ud-photo-input");
+  if (input) input.value = "";
+}
+
+async function submitUdUpdate() {
+  const orderId = $("ud-order-select").value;
+  if (!orderId) {
+    toast("Please select an order.", "error");
+    return;
+  }
+  const status = $("ud-status").value;
+  const body = { status };
+
+  if (status === "delivered") {
+    const sig = getUdSignatureData();
+    if (sig) body.signature_data = sig;
+    if (_udPhotoData) body.proof_of_delivery = _udPhotoData;
+  }
+
+  if (status === "failed") {
+    const reason = $("ud-failure-reason").value;
+    if (!reason) {
+      $("ud-result").innerHTML =
+        '<p class="error">Please select a failure reason.</p>';
+      return;
+    }
+    body.failure_reason =
+      reason === "Other" ? $("ud-failure-other").value || "Other" : reason;
+  }
+
+  if ($("ud-notes").value.trim()) body.notes = $("ud-notes").value.trim();
+
+  try {
+    await api("PATCH", `/api/tracking/delivery-items/${orderId}`, body);
+    $("ud-result").innerHTML =
+      '<div class="ud-success"><p class="success">✅ WMS updated. Client notified via WebSocket.</p></div>';
+    delete orderDetailsCache[orderId];
+    _driverManifestCache = null;
+    // Refresh the dropdown after a moment
+    setTimeout(() => loadUpdateDelivery(), 1500);
+  } catch (e) {
+    $("ud-result").innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  DRIVER: ROUTE VIEW                                       */
+/* ══════════════════════════════════════════════════════════ */
+async function loadRouteView() {
+  const stopsList = $("route-stops-list");
+  const statsEl = $("route-summary-stats");
+  const label = $("route-map-label");
+  if (!stopsList) return;
+
+  stopsList.innerHTML = '<p class="muted">Loading route…</p>';
+  if (statsEl) statsEl.style.display = "none";
+
+  try {
+    const manifests = _driverManifestCache || (await _fetchDriverManifests());
+
+    // Get all items sorted by sequence
+    const allItems = manifests.flatMap((m) =>
+      (m.items || []).map((item, idx) => ({
+        ...item,
+        seq: item.sequence || idx + 1,
+      })),
+    );
+    allItems.sort((a, b) => a.seq - b.seq);
+
+    // Extract route data
+    const routeData = manifests.find((m) => m.route_data)?.route_data || null;
+    let route = null;
+    if (routeData) {
+      try {
+        route =
+          typeof routeData === "string" ? JSON.parse(routeData) : routeData;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    // Summary stats
+    const totalStops = allItems.length;
+    const distance =
+      route?.estimated_distance_km || route?.total_distance || null;
+    const time = route?.estimated_duration_min || route?.total_time || null;
+
+    if (statsEl) {
+      statsEl.style.display = "flex";
+      $("route-total-stops").textContent = totalStops;
+      $("route-distance").textContent = distance ? distance + " km" : "—";
+      $("route-time").textContent = time ? time + " min" : "—";
+    }
+
+    if (!allItems.length) {
+      stopsList.innerHTML =
+        '<div class="no-data-message"><p>No stops in route.</p></div>';
+      if (label) label.textContent = "No route data available";
+      return;
+    }
+
+    // Numbered list of stops
+    stopsList.innerHTML = `<ol class="route-numbered-list">${allItems
+      .map((item) => {
+        const order = orderDetailsCache[item.order_id] || {};
+        return `
+        <li class="route-list-item">
+          <div class="route-list-info">
+            <strong>${escapeHtml(order.recipient_name || "Stop " + item.seq)}</strong>
+            <span class="muted">${escapeHtml(order.delivery_address || "—")}</span>
+          </div>
+          <span class="badge ${item.status}">${item.status.replace(/_/g, " ")}</span>
+        </li>`;
+      })
+      .join("")}</ol>`;
+
+    // Update map label and pins
+    if (label) label.textContent = `Route available • ${totalStops} stops`;
+
+    // Render dynamic pins on map
+    const pinsEl = $("route-map-pins");
+    if (pinsEl && totalStops > 0) {
+      pinsEl.innerHTML = allItems
+        .map((item, idx) => {
+          const pct =
+            totalStops === 1 ? 50 : 15 + (idx / (totalStops - 1)) * 70;
+          const topPct = 25 + Math.sin((idx / totalStops) * Math.PI) * 35;
+          return `<div class="mini-map-pin" style="left:${pct}%;top:${topPct}%"><span class="pin-number">${idx + 1}</span></div>`;
+        })
+        .join("");
+    }
+  } catch (e) {
+    stopsList.innerHTML = `<p class="error">${e.message}</p>`;
     toast(e.message || "Failed to load route.", "error");
   }
+}
+
+// Keep old loadRouteMap as alias
+async function loadRouteMap() {
+  return loadRouteView();
 }
 
 /* ══════════════════════════════════════════════════════════ */
@@ -1009,22 +1482,10 @@ async function loadAdminDashboard() {
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>',
       },
       {
-        n: stats.pending,
-        l: "Pending",
-        cls: "stat-amber",
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-      },
-      {
-        n: stats.confirmed,
-        l: "Confirmed",
-        cls: "stat-sky",
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-      },
-      {
-        n: stats.processing,
-        l: "Processing",
-        cls: "stat-violet",
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
+        n: stats.delivered,
+        l: "Delivered",
+        cls: "stat-green",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
       },
       {
         n: stats.in_transit,
@@ -1033,83 +1494,277 @@ async function loadAdminDashboard() {
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
       },
       {
-        n: stats.delivered,
-        l: "Delivered",
-        cls: "stat-green",
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-      },
-      {
         n: stats.failed,
         l: "Failed",
         cls: "stat-red",
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
       },
-      {
-        n: stats.cancelled,
-        l: "Cancelled",
-        cls: "stat-slate",
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
-      },
     ]
       .map(
         (s) =>
-          `<div class="stat-card ${s.cls}">
-            <div class="stat-card-header">
-              <div class="stat-icon">${s.icon}</div>
-            </div>
-            <div class="stat-num">${s.n ?? 0}</div>
-            <div class="stat-label">${s.l}</div>
-          </div>`,
+          `<div class="stat-card ${s.cls}"><div class="stat-card-header"><div class="stat-icon">${s.icon}</div></div><div class="stat-num">${s.n ?? 0}</div><div class="stat-label">${s.l}</div></div>`,
       )
       .join("");
   } catch (e) {
     $("stats-cards").innerHTML = `<p class="error">${e.message}</p>`;
   }
 
-  // Recent orders
+  // 3 System Health Dots
   try {
-    const data = await api("GET", "/api/orders/?limit=5");
-    const orders = data.orders || [];
-    $("admin-recent-orders").innerHTML = orders.length
-      ? orders
-          .map(
-            (o) =>
-              `<div class="mini-list-item">
-        <strong>${shortId(o.order_id)}</strong> ${o.recipient_name}
-        <span class="badge ${o.status}">${o.status}</span>
-        <span style="float:right;color:#999;font-size:0.8rem">${fmtDate(o.created_at)}</span>
-      </div>`,
-          )
-          .join("")
-      : "<p style='color:#999'>No orders yet</p>";
+    const idata = await api("GET", "/api/orders/admin/integration-status");
+    const integrations = idata.integrations || {};
+    const dots = { cms: "CMS", ros: "ROS", wms: "WMS" };
+    const dotsEl = $("admin-health-dots");
+    if (dotsEl)
+      dotsEl.innerHTML = Object.entries(dots)
+        .map(([key, label]) => {
+          const info = integrations[key] || {};
+          const color =
+            info.status === "healthy"
+              ? "#27ae60"
+              : info.status === "degraded"
+                ? "#f39c12"
+                : "#e74c3c";
+          return `<div class="health-dot-item"><span class="health-dot" style="background:${color}"></span> ${label}</div>`;
+        })
+        .join("");
   } catch (e) {
-    $("admin-recent-orders").innerHTML = `<p class="error">${e.message}</p>`;
+    const el = $("admin-health-dots");
+    if (el) el.innerHTML = `<p class="error">${e.message}</p>`;
   }
 
-  // Recent tracking events
+  // Recent Activity Feed
   try {
     const events = await api("GET", "/api/tracking/events/recent?limit=5");
     const evts = events.events || events || [];
-    $("admin-recent-events").innerHTML = evts.length
-      ? evts
-          .map(
-            (ev) =>
-              `<div class="mini-list-item">
-        <strong>${(ev.event_type || "").replace(/_/g, " ")}</strong>
-        <span style="color:#666"> – ${shortId(ev.order_id)}</span>
-        <span style="float:right;color:#999;font-size:0.8rem">${fmtDate(ev.timestamp)}</span>
-      </div>`,
-          )
-          .join("")
-      : "<p style='color:#999'>No events yet</p>";
+    const feedEl = $("admin-activity-feed");
+    if (feedEl)
+      feedEl.innerHTML = evts.length
+        ? evts
+            .map(
+              (ev) => `<div class="activity-item">
+          <div class="activity-dot ${ev.status || "info"}"></div>
+          <div class="activity-content">
+            <strong>${(ev.event_type || "").replace(/_/g, " ")}</strong>
+            <span class="muted"> — ${shortId(ev.order_id)}</span>
+          </div>
+          <span class="activity-time">${fmtDate(ev.timestamp)}</span>
+        </div>`,
+            )
+            .join("")
+        : '<p class="muted">No recent activity</p>';
   } catch (e) {
-    $("admin-recent-events").innerHTML = `<p class="error">${e.message}</p>`;
+    const el = $("admin-activity-feed");
+    if (el) el.innerHTML = `<p class="error">${e.message}</p>`;
   }
+}
 
-  // Load system status and integration status
-  await loadSystemStatus();
-  await loadIntegrationStatus();
-  await loadFailedMessages();
+/* ══════════════════════════════════════════════════════════ */
+/*  ADMIN: NEW TAB FUNCTIONS                                 */
+/* ══════════════════════════════════════════════════════════ */
+async function loadSystemStatusTab() {
+  const container = $("system-status-cards");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading system status…</p>';
+  try {
+    const data = await api("GET", "/api/orders/admin/integration-status");
+    const integrations = data.integrations || {};
+    const systemMeta = {
+      cms: {
+        name: "CMS",
+        protocol: "SOAP / XML",
+        desc: "Client Management System",
+      },
+      ros: {
+        name: "ROS",
+        protocol: "REST / JSON",
+        desc: "Route Optimization System",
+      },
+      wms: {
+        name: "WMS",
+        protocol: "TCP / IP",
+        desc: "Warehouse Management System",
+      },
+    };
+    container.innerHTML =
+      Object.entries(integrations)
+        .map(([key, info]) => {
+          const meta = systemMeta[key] || {
+            name: key.toUpperCase(),
+            protocol: "Unknown",
+            desc: key,
+          };
+          const statusColor =
+            info.status === "healthy"
+              ? "#27ae60"
+              : info.status === "degraded"
+                ? "#f39c12"
+                : "#e74c3c";
+          const statusLabel =
+            info.status === "healthy"
+              ? "Healthy"
+              : info.status === "degraded"
+                ? "Degraded"
+                : "Unhealthy";
+          return `<div class="ss-card">
+        <div class="ss-card-header">
+          <div class="ss-dot" style="background:${statusColor}"></div>
+          <h3>${meta.name}</h3>
+          <span class="ss-status-badge" style="color:${statusColor}">${statusLabel}</span>
+        </div>
+        <div class="ss-card-body">
+          <div class="ss-row"><span class="ss-label">Protocol</span><span class="ss-value">${meta.protocol}</span></div>
+          <div class="ss-row"><span class="ss-label">Response Time</span><span class="ss-value">${info.response_time_ms || "—"}ms</span></div>
+          <div class="ss-row"><span class="ss-label">Last Ping</span><span class="ss-value">${info.last_check ? fmtDate(info.last_check) : "—"}</span></div>
+          <div class="ss-row"><span class="ss-label">Success Rate (24h)</span><span class="ss-value">${info.success_rate_24h ? info.success_rate_24h.toFixed(1) + "%" : "—"}</span></div>
+          <div class="ss-row"><span class="ss-label">Calls (24h)</span><span class="ss-value">${info.total_calls_24h || 0}</span></div>
+        </div>
+        <div class="ss-card-footer">${meta.desc}</div>
+      </div>`;
+        })
+        .join("") ||
+      '<div class="no-data-message"><p>No integration data available</p></div>';
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadMessageQueue() {
+  const statsContainer = $("mq-stats");
+  const tableContainer = $("mq-table");
+  if (!statsContainer || !tableContainer) return;
+  try {
+    const sysData = await api("GET", "/api/orders/admin/system-status");
+    const eventsData = await api(
+      "GET",
+      "/api/tracking/integration-events?limit=20",
+    );
+    const events = eventsData.events || [];
+    const pending = events.filter((ev) => ev.status === "pending").length;
+    const processed = events.filter((ev) => ev.status === "success").length;
+    const failed =
+      sysData.dlq_messages ||
+      events.filter((ev) => ev.status === "failed").length;
+    statsContainer.innerHTML = `
+      <div class="mq-stat"><div class="mq-stat-value">${pending}</div><div class="mq-stat-label">Pending</div></div>
+      <div class="mq-stat processed"><div class="mq-stat-value">${processed}</div><div class="mq-stat-label">Processed Today</div></div>
+      <div class="mq-stat failed"><div class="mq-stat-value">${failed}</div><div class="mq-stat-label">Failed</div></div>`;
+    if (!events.length) {
+      tableContainer.innerHTML =
+        '<div class="no-data-message"><p>No messages in queue</p></div>';
+      return;
+    }
+    tableContainer.innerHTML = `
+      <table>
+        <thead><tr><th>Message ID</th><th>Type</th><th>Target System</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>${events
+          .map(
+            (ev) => `<tr>
+          <td class="mono">${ev.event_id || "—"}</td>
+          <td>${escapeHtml(ev.event_type || "—")}</td>
+          <td>${escapeHtml(ev.target_system || "—")}</td>
+          <td><span class="badge ${ev.status}">${ev.status}</span></td>
+          <td>${fmtDate(ev.created_at)}</td>
+        </tr>`,
+          )
+          .join("")}</tbody>
+      </table>`;
+  } catch (e) {
+    statsContainer.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadIntegrationLog() {
+  const container = $("intlog-events-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading integration log…</p>';
+  try {
+    const status = $("intlog-status-filter")
+      ? $("intlog-status-filter").value
+      : "";
+    const source = $("intlog-source-filter")
+      ? $("intlog-source-filter").value
+      : "";
+    let qs = "?limit=50";
+    if (status) qs += `&status=${status}`;
+    if (source) qs += `&source=${source}`;
+    const data = await api("GET", `/api/tracking/integration-events${qs}`);
+    const events = data.events || [];
+    if (!events.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No integration events found.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>Timestamp</th><th>Event</th><th>From</th><th>To</th><th>Status</th></tr></thead>
+        <tbody>${events
+          .map(
+            (ev) => `<tr>
+          <td>${fmtDate(ev.created_at)}</td>
+          <td>${escapeHtml(ev.event_type || "—")}</td>
+          <td>${escapeHtml(ev.source_system || "—")}</td>
+          <td>${escapeHtml(ev.target_system || "—")}</td>
+          <td><span class="badge ${ev.status === "success" ? "delivered" : ev.status}">${ev.status === "success" ? "✅" : ev.status === "failed" ? "❌" : ev.status}</span></td>
+        </tr>`,
+          )
+          .join("")}</tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadFailedMessagesTab() {
+  const container = $("fm-list");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading failed messages…</p>';
+  try {
+    const data = await api("GET", "/api/orders/admin/failed-messages?limit=20");
+    const messages = data.messages || [];
+    const countEl = $("fm-count");
+    if (countEl) countEl.textContent = data.count || 0;
+    if (!messages.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><polyline points="20 6 9 17 4 12"/></svg><p>No failed messages — all systems operating normally</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead><tr><th>System</th><th>Event Type</th><th>Error Reason</th><th>Retry Count</th><th>Order</th><th>Action</th></tr></thead>
+        <tbody>${messages
+          .map(
+            (msg) => `<tr>
+          <td><span class="badge ${(msg.target_system || "").toLowerCase()}">${msg.target_system}</span></td>
+          <td>${escapeHtml(msg.event_type || "Unknown")}</td>
+          <td class="fm-error-cell" title="${escapeHtml(msg.error_message || "")}">${escapeHtml((msg.error_message || "—").slice(0, 60))}</td>
+          <td>${msg.retry_count}/${msg.max_retries}</td>
+          <td class="mono">${shortId(msg.order_id)}</td>
+          <td><button class="btn-small btn-warning" onclick="retryFailedMessage('${msg.event_id}')" ${!msg.can_retry ? "disabled" : ""}>${msg.can_retry ? "Retry" : "Max Retries"}</button></td>
+        </tr>`,
+          )
+          .join("")}</tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function retryFailedMessage(eventId) {
+  try {
+    const result = await api(
+      "POST",
+      `/api/orders/admin/retry-event/${eventId}`,
+    );
+    if (result.success) {
+      toast("Message retried — check Integration Log!", "success");
+      loadFailedMessagesTab();
+    } else {
+      toast(`Retry failed: ${result.error || "Unknown error"}`, "error");
+    }
+  } catch (e) {
+    toast(e.message || "Retry failed.", "error");
+  }
 }
 
 /* ══════════════════════════════════════════════════════════ */
@@ -1513,15 +2168,30 @@ async function loadAllOrders(page) {
     const status = $("admin-order-status-filter")
       ? $("admin-order-status-filter").value
       : "";
-    const priority = $("admin-order-priority-filter")
-      ? $("admin-order-priority-filter").value
-      : "";
     let qs = `?skip=${allOrdersPage * 20}&limit=20`;
     if (status) qs += `&status=${status}`;
-    if (priority) qs += `&priority=${priority}`;
     const data = await api("GET", `/api/orders/${qs}`);
     const orders = data.orders || [];
-    renderOrderCards(orders, "all-orders-list", true);
+    if (!orders.length) {
+      $("all-orders-list").innerHTML =
+        '<div class="no-data-message"><p>No orders found.</p></div>';
+    } else {
+      $("all-orders-list").innerHTML = `
+        <table>
+          <thead><tr><th>Order ID</th><th>Client</th><th>Status</th><th>Created</th><th>Assigned Driver</th></tr></thead>
+          <tbody>${orders
+            .map(
+              (o) => `<tr>
+            <td class="mono">${shortId(o.order_id)}</td>
+            <td>${escapeHtml(o.recipient_name || "—")}</td>
+            <td><span class="badge ${o.status}">${o.status.replace(/_/g, " ")}</span></td>
+            <td>${fmtDate(o.created_at)}</td>
+            <td>${o.assigned_driver || o.driver_id || "—"}</td>
+          </tr>`,
+            )
+            .join("")}</tbody>
+        </table>`;
+    }
     // pagination
     const total = data.total || orders.length;
     const pages = Math.ceil(total / 20);
@@ -1762,7 +2432,55 @@ async function loadOrders() {
     const orders = data.orders || [];
     renderOrderCards(orders, "orders-list", false);
   } catch (e) {
-    $("orders-list").innerHTML = `<p class="error">${e.message}</p>`;
+    const el = $("orders-list");
+    if (el) el.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadClientOrders() {
+  const container = $("client-orders-table");
+  if (!container) return;
+  container.innerHTML = '<p class="muted">Loading…</p>';
+  try {
+    const data = await api("GET", "/api/orders/");
+    const orders = data.orders || [];
+    if (!orders.length) {
+      container.innerHTML =
+        '<div class="no-data-message"><p>No orders yet. Create your first order!</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Recipient</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders
+            .map(
+              (o) => `
+            <tr class="clickable-row" onclick="viewOrderDetail('${o.order_id}')">
+              <td class="mono">${shortId(o.order_id)}</td>
+              <td>${escapeHtml(o.recipient_name || "—")}</td>
+              <td><span class="badge ${escapeHtml(o.status)}">${escapeHtml(String(o.status || "").replace(/_/g, " "))}</span></td>
+              <td>${fmtDate(o.created_at)}</td>
+              <td class="order-row-actions" onclick="event.stopPropagation()">
+                <button class="btn-xs btn-small" onclick="trackDeliveryById('${o.order_id}')">Track</button>
+                ${o.status === "pending" ? `<button class="btn-xs btn-small btn-danger" onclick="updateOrderStatus('${o.order_id}','cancelled')">Cancel</button>` : ""}
+              </td>
+            </tr>
+          `,
+            )
+            .join("")}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="error">${e.message}</p>`;
   }
 }
 
@@ -1971,8 +2689,17 @@ async function submitOrder() {
     const notes = $("order-notes").value.trim();
     if (notes) body.notes = notes;
     const data = await api("POST", "/api/orders/", body);
-    $("order-result").innerHTML =
-      `<p class="success">Order created! ID: <strong>${data.order_id}</strong></p>`;
+    $("order-result").innerHTML = `
+      <div class="order-success-card">
+        <div class="order-success-icon">✅</div>
+        <h3>Order Submitted Successfully!</h3>
+        <p>Order ID: <strong class="mono">${data.order_id}</strong></p>
+        <p><span class="badge pending">Pending — received by CMS</span></p>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn-small btn-outline" onclick="trackDeliveryById('${data.order_id}')">Track Order</button>
+          <button class="btn-small btn-outline" onclick="switchTab('orders')">View My Orders</button>
+        </div>
+      </div>`;
     [
       "order-pickup",
       "order-delivery",
@@ -1996,7 +2723,7 @@ function trackOrderById(orderId) {
     .querySelectorAll(".tab-content")
     .forEach((el) => (el.style.display = "none"));
   document
-    .querySelectorAll(".tab")
+    .querySelectorAll(".nav-tab")
     .forEach((el) => el.classList.remove("active"));
   $("tracking-tab").style.display = "block";
   trackOrder();
@@ -2086,6 +2813,142 @@ function connectTrackingWs(orderId) {
   setInterval(() => {
     if (trackingWs && trackingWs.readyState === WebSocket.OPEN)
       trackingWs.send("ping");
+  }, 30000);
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  CLIENT: TRACK DELIVERY                                   */
+/* ══════════════════════════════════════════════════════════ */
+let _deliveryWs = null;
+
+function trackDeliveryById(orderId) {
+  // Switch to track-delivery tab
+  const nav = $("nav-tabs");
+  const tabs = TAB_CONFIG[currentUser.role] || TAB_CONFIG.client;
+  const tdTab = tabs.find((t) => t.id === "track-delivery");
+  if (tdTab) {
+    const btns = nav.querySelectorAll(".nav-tab");
+    const idx = tabs.indexOf(tdTab);
+    switchTab("track-delivery", btns[idx], tdTab.load);
+  }
+  $("td-order-id").value = orderId;
+  trackDelivery();
+}
+
+async function trackDelivery() {
+  const orderId = $("td-order-id").value.trim();
+  if (!orderId) {
+    toast("Please enter an Order ID.", "error");
+    return;
+  }
+
+  const resultEl = $("td-tracking-result");
+  const progressWrap = $("td-progress-wrap");
+  const liveFeed = $("td-live-feed");
+
+  resultEl.innerHTML = '<p class="muted">Fetching tracking events…</p>';
+  liveFeed.innerHTML = "";
+  progressWrap.style.display = "none";
+
+  try {
+    const data = await api("GET", `/api/tracking/${orderId}`);
+    const events = data.events || [];
+    if (!events.length) {
+      resultEl.innerHTML =
+        "<p>No tracking events yet. The order is being processed.</p>";
+    } else {
+      resultEl.innerHTML = `<div class="timeline">${events
+        .map(
+          (e) => `
+        <div class="timeline-item">
+          <div class="time">${fmtDate(e.timestamp)}</div>
+          <div class="info">
+            <div class="event-type">${(e.event_type || "").replace(/_/g, " ")}</div>
+            <div class="event-desc">${e.description || ""}</div>
+            ${e.location ? `<div class="event-desc">📍 ${e.location}</div>` : ""}
+          </div>
+        </div>`,
+        )
+        .join("")}</div>`;
+    }
+
+    // Show progress bar
+    const latestStatus = events.length
+      ? events[events.length - 1].event_type
+      : "pending";
+    const pct = statusToPct(latestStatus);
+    progressWrap.style.display = "block";
+    $("td-progress-bar").style.width = pct + "%";
+    $("td-progress-label").textContent = pct + "%";
+
+    connectDeliveryWs(orderId);
+  } catch (e) {
+    resultEl.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+function connectDeliveryWs(orderId) {
+  if (_deliveryWs) _deliveryWs.close();
+  const wsUrl = `${WS_BASE}/api/tracking/ws/${orderId}`;
+  _deliveryWs = new WebSocket(wsUrl);
+
+  const statusEl = $("td-ws-status");
+  const liveFeed = $("td-live-feed");
+  const progressWrap = $("td-progress-wrap");
+
+  _deliveryWs.onopen = () => {
+    statusEl.className = "ws-badge connected";
+    statusEl.innerHTML = "&#x1F7E2; Connected";
+  };
+
+  _deliveryWs.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "pong") return;
+
+    // Live feed entry
+    const div = document.createElement("div");
+    div.className = "td-feed-item";
+    const time = data.timestamp
+      ? new Date(data.timestamp).toLocaleTimeString()
+      : new Date().toLocaleTimeString();
+    div.innerHTML = `<span class="td-feed-time">${time}</span> <strong>${(data.event_type || "").replace(/_/g, " ")}</strong> — ${data.description || "Status update"}`;
+    liveFeed.prepend(div);
+
+    // Update progress bar
+    const pct = statusToPct(data.event_type || "");
+    progressWrap.style.display = "block";
+    $("td-progress-bar").style.width = pct + "%";
+    $("td-progress-label").textContent = pct + "%";
+
+    // Also update dashboard tracking card if same order
+    if (_trackCardOrderId && data.order_id === _trackCardOrderId) {
+      updateTrackCard(
+        { order_id: data.order_id, status: data.event_type || "processing" },
+        { status: data.event_type || "processing" },
+      );
+    }
+
+    pushNotification({
+      title: "Tracking update",
+      message: `${(data.event_type || "").replace(/_/g, " ")}: ${data.description || ""}`,
+      type: "info",
+      timestamp: data.timestamp || new Date().toISOString(),
+    });
+  };
+
+  _deliveryWs.onclose = () => {
+    statusEl.className = "ws-badge disconnected";
+    statusEl.innerHTML = "&#x1F534; Disconnected";
+  };
+
+  _deliveryWs.onerror = () => {
+    statusEl.className = "ws-badge disconnected";
+    statusEl.innerHTML = "&#x1F534; Connection Error";
+  };
+
+  setInterval(() => {
+    if (_deliveryWs && _deliveryWs.readyState === WebSocket.OPEN)
+      _deliveryWs.send("ping");
   }, 30000);
 }
 

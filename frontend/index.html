@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
@@ -15,288 +15,180 @@
   <body>
     <!-- ── Auth Section ───────────────────────────────────── -->
     <div id="auth-section" class="auth-wrapper">
-      <div class="auth-left">
-        <div class="auth-brand">
-          <div class="auth-logo">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 48 48"
-              fill="none"
-              aria-hidden="true"
-            >
-              <rect width="48" height="48" rx="14" fill="#2563eb" />
-              <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.72" />
-              <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
-              <circle cx="18" cy="34" r="2.5" fill="#fff" />
-              <circle cx="32" cy="34" r="2.5" fill="#fff" />
-            </svg>
+      <!-- Background orbs -->
+      <div class="auth-orb auth-orb-1"></div>
+      <div class="auth-orb auth-orb-2"></div>
+
+      <div class="auth-inner">
+        <!-- Brand + feature panel -->
+        <div class="auth-left">
+          <div class="auth-brand">
+            <div class="auth-logo">
+              <svg width="32" height="32" viewBox="0 0 52 52" fill="none">
+                <path d="M15 32l7-14h9l-7 14H15z" fill="#fff" opacity="0.6" />
+                <path d="M22 18h9l-7 14H15l7-14z" fill="#fff" />
+                <circle cx="19" cy="36" r="3" fill="#fff" />
+                <circle cx="34" cy="36" r="3" fill="#fff" />
+              </svg>
+            </div>
+            <h1>SwiftTrack</h1>
+            <p>Smart Logistics &nbsp;·&nbsp; Seamless Delivery</p>
           </div>
-          <h1>SwiftTrack</h1>
-          <p>Smart Logistics. Seamless Delivery.</p>
+
+          <!-- Platform capabilities -->
+          <div class="auth-features">
+            <div class="auth-feature">
+              <div class="auth-feature-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <strong>Real-time Tracking</strong>
+                <span>Live WebSocket updates on every delivery</span>
+              </div>
+            </div>
+            <div class="auth-feature">
+              <div class="auth-feature-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon
+                    points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
+                  />
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <strong>Route Optimisation</strong>
+                <span>AI-powered delivery sequencing via ROS</span>
+              </div>
+            </div>
+            <div class="auth-feature">
+              <div class="auth-feature-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <strong>CMS · ROS · WMS Integrated</strong>
+                <span>Unified middleware across all systems</span>
+              </div>
+            </div>
+            <div class="auth-feature">
+              <div class="auth-feature-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <strong>Saga Transaction Safety</strong>
+                <span>Guaranteed order consistency & recovery</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="auth-illustration" aria-hidden="true">
-          <svg
-            viewBox="0 0 880 520"
-            width="100%"
-            height="100%"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <linearGradient
-                id="g1"
-                x1="84"
-                y1="32"
-                x2="760"
-                y2="520"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stop-color="#2563EB" stop-opacity="0.18" />
-                <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.02" />
-              </linearGradient>
-              <linearGradient
-                id="g2"
-                x1="0"
-                y1="0"
-                x2="880"
-                y2="520"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stop-color="#60A5FA" stop-opacity="0.14" />
-                <stop offset="1" stop-color="#2563EB" stop-opacity="0.06" />
-              </linearGradient>
-              <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
-              </filter>
-            </defs>
-
-            <!-- Soft background blobs -->
-            <circle
-              cx="160"
-              cy="110"
-              r="84"
-              fill="url(#g2)"
-              filter="url(#soft)"
-            />
-            <circle
-              cx="720"
-              cy="140"
-              r="96"
-              fill="url(#g1)"
-              filter="url(#soft)"
-            />
-            <circle
-              cx="520"
-              cy="420"
-              r="120"
-              fill="url(#g2)"
-              filter="url(#soft)"
-            />
-
-            <!-- Route lines -->
-            <path
-              d="M120 330 C 220 260, 260 360, 350 300 C 470 220, 520 360, 640 290 C 730 240, 780 280, 820 240"
-              stroke="#2563EB"
-              stroke-opacity="0.35"
-              stroke-width="6"
-              stroke-linecap="round"
-              stroke-dasharray="14 14"
-            />
-            <path
-              d="M110 220 C 200 180, 260 240, 350 190 C 460 130, 570 220, 700 160"
-              stroke="#10B981"
-              stroke-opacity="0.25"
-              stroke-width="5"
-              stroke-linecap="round"
-              stroke-dasharray="10 14"
-            />
-
-            <!-- Pins -->
-            <g opacity="0.92">
-              <path
-                d="M150 335c0-18 14-32 32-32s32 14 32 32c0 25-32 55-32 55s-32-30-32-55Z"
-                fill="#2563EB"
-                fill-opacity="0.18"
-              />
-              <circle
-                cx="182"
-                cy="335"
-                r="10"
-                fill="#2563EB"
-                fill-opacity="0.55"
-              />
-
-              <path
-                d="M570 300c0-18 14-32 32-32s32 14 32 32c0 25-32 55-32 55s-32-30-32-55Z"
-                fill="#10B981"
-                fill-opacity="0.14"
-              />
-              <circle
-                cx="602"
-                cy="300"
-                r="10"
-                fill="#10B981"
-                fill-opacity="0.45"
-              />
-
-              <path
-                d="M780 238c0-18 14-32 32-32s32 14 32 32c0 25-32 55-32 55s-32-30-32-55Z"
-                fill="#2563EB"
-                fill-opacity="0.14"
-              />
-              <circle
-                cx="812"
-                cy="238"
-                r="10"
-                fill="#2563EB"
-                fill-opacity="0.42"
-              />
-            </g>
-
-            <!-- Delivery van -->
-            <g transform="translate(310 325)" opacity="0.95">
-              <rect
-                x="0"
-                y="34"
-                width="240"
-                height="92"
-                rx="18"
-                fill="#FFFFFF"
-                fill-opacity="0.75"
-                stroke="#E2E8F0"
-              />
-              <rect
-                x="30"
-                y="54"
-                width="104"
-                height="36"
-                rx="10"
-                fill="#2563EB"
-                fill-opacity="0.08"
-                stroke="#E2E8F0"
-              />
-              <path
-                d="M240 60h52c10 0 18 8 18 18v48h-70V60Z"
-                fill="#FFFFFF"
-                fill-opacity="0.7"
-                stroke="#E2E8F0"
-              />
-              <rect
-                x="256"
-                y="72"
-                width="36"
-                height="18"
-                rx="8"
-                fill="#2563EB"
-                fill-opacity="0.08"
-              />
-              <circle
-                cx="62"
-                cy="132"
-                r="18"
-                fill="#0F172A"
-                fill-opacity="0.08"
-              />
-              <circle
-                cx="62"
-                cy="132"
-                r="10"
-                fill="#FFFFFF"
-                fill-opacity="0.9"
-                stroke="#E2E8F0"
-              />
-              <circle
-                cx="222"
-                cy="132"
-                r="18"
-                fill="#0F172A"
-                fill-opacity="0.08"
-              />
-              <circle
-                cx="222"
-                cy="132"
-                r="10"
-                fill="#FFFFFF"
-                fill-opacity="0.9"
-                stroke="#E2E8F0"
-              />
-              <path
-                d="M24 38h104"
-                stroke="#2563EB"
-                stroke-opacity="0.35"
-                stroke-width="6"
-                stroke-linecap="round"
-              />
-            </g>
-          </svg>
-        </div>
-      </div>
-      <div class="auth-right">
-        <div class="card auth-card">
-          <!-- Login Form -->
-          <div id="login-form">
+        <!-- Login card -->
+        <div class="auth-right">
+          <div class="card auth-card">
             <h2>Welcome back</h2>
-            <p class="subtitle">Sign in to your account</p>
-            <div class="form-group">
-              <label for="login-username">Username</label>
-              <input
-                type="text"
-                id="login-username"
-                placeholder="Enter your username"
-              />
-            </div>
-            <div class="form-group">
-              <label for="login-password">Password</label>
-              <input
-                type="password"
-                id="login-password"
-                placeholder="Enter your password"
-              />
-            </div>
-            <div class="form-group">
-              <label for="login-role">Role</label>
-              <input
-                type="text"
-                id="login-role"
-                value="Auto-detected after sign in"
-                disabled
-              />
-            </div>
+            <div class="auth-divider">Sign in to continue</div>
 
-            <div class="auth-row">
-              <label class="remember">
-                <input type="checkbox" id="remember-me" checked />
-                <span>Remember me</span>
-              </label>
-              <button class="link-btn" type="button" onclick="forgotPassword()">
-                Forgot password?
+            <!-- Login Form -->
+            <div id="login-form">
+              <div class="form-group">
+                <label for="login-username">Username</label>
+                <input
+                  type="text"
+                  id="login-username"
+                  placeholder="Enter your username"
+                />
+              </div>
+              <div class="form-group">
+                <label for="login-password">Password</label>
+                <input
+                  type="password"
+                  id="login-password"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div class="auth-row">
+                <label class="remember">
+                  <input type="checkbox" id="remember-me" checked />
+                  <span>Remember me</span>
+                </label>
+                <button
+                  class="link-btn"
+                  type="button"
+                  onclick="forgotPassword()"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <button id="login-btn" onclick="login()" class="btn-primary">
+                <span class="btn-label">Sign In</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
               </button>
             </div>
-
-            <button id="login-btn" onclick="login()" class="btn-primary">
-              <span class="btn-label">Sign In</span>
-              <span class="btn-spinner" aria-hidden="true"></span>
-            </button>
+            <div id="auth-error" class="error"></div>
           </div>
-          <div id="auth-error" class="error"></div>
         </div>
       </div>
+      <!-- /.auth-inner -->
     </div>
 
-    <!-- ── Main Dashboard ─────────────────────────────────── -->
+    <!--Main Dashboard-->
     <div id="dashboard-section" class="dashboard-layout" style="display: none">
       <!-- Sidebar -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="#2563eb" />
-            <path d="M14 30l6-12h8l-6 12H14z" fill="#fff" opacity="0.7" />
-            <path d="M20 18l6-0h8l-6 12H20l6-12z" fill="#fff" />
-            <circle cx="18" cy="34" r="2.5" fill="#fff" />
-            <circle cx="32" cy="34" r="2.5" fill="#fff" />
-          </svg>
+          <div class="brand-logo">
+            <svg width="18" height="18" viewBox="0 0 52 52" fill="none">
+              <path d="M15 32l7-14h9l-7 14H15z" fill="#fff" opacity="0.65" />
+              <path d="M22 18h9l-7 14H15l7-14z" fill="#fff" />
+              <circle cx="19" cy="36" r="3" fill="#fff" />
+              <circle cx="34" cy="36" r="3" fill="#fff" />
+            </svg>
+          </div>
           <span>SwiftTrack</span>
           <button
             class="sidebar-collapse-btn"
@@ -420,38 +312,14 @@
             <div id="admin-dashboard-root"></div>
           </div>
 
-          <!-- ADMIN: Analytics -->
-          <div id="analytics-tab" class="tab-content" style="display: none">
+          <!-- ADMIN: System Status -->
+          <div id="system-status-tab" class="tab-content" style="display: none">
             <div class="tab-header">
-              <h2>Analytics</h2>
-            </div>
-            <div class="analytics-grid">
-              <div class="card">
-                <div class="chart-head">
-                  <h3>Orders Over Time</h3>
-                  <span class="muted">Last 14 days</span>
-                </div>
-                <div class="chart-wrap">
-                  <canvas id="chart-orders" height="110"></canvas>
-                </div>
-              </div>
-              <div class="card">
-                <div class="chart-head">
-                  <h3>Delivery Status</h3>
-                  <span class="muted">Current distribution</span>
-                </div>
-                <div class="chart-wrap">
-                  <canvas id="chart-status" height="110"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ADMIN: System Logs -->
-          <div id="system-logs-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>System Logs</h2>
-              <button class="btn-small btn-outline" onclick="loadSystemLogs()">
+              <h2>System Status</h2>
+              <button
+                class="btn-small btn-outline"
+                onclick="loadSystemStatusTab()"
+              >
                 <svg
                   width="16"
                   height="16"
@@ -466,126 +334,137 @@
                 Refresh
               </button>
             </div>
-
-            <!-- Sub-tab navigation -->
-            <div class="sub-tabs" id="logs-sub-tabs">
-              <button
-                class="sub-tab active"
-                onclick="switchLogsSubTab('integration', this)"
-              >
-                Integration Logs
-              </button>
-              <button
-                class="sub-tab"
-                onclick="switchLogsSubTab('transactions', this)"
-              >
-                Transactions
-              </button>
-              <button class="sub-tab" onclick="switchLogsSubTab('audit', this)">
-                Audit Trail
-              </button>
-              <button
-                class="sub-tab"
-                onclick="switchLogsSubTab('errors', this)"
-              >
-                Error Summary
-              </button>
-            </div>
-
-            <!-- Integration Logs sub-panel -->
-            <div id="logs-integration-panel" class="logs-sub-panel">
-              <div class="filter-bar">
-                <div class="filter-group">
-                  <label>Status</label>
-                  <select id="log-status-filter" onchange="loadSystemLogs()">
-                    <option value="">All</option>
-                    <option value="success">Success</option>
-                    <option value="failed">Failed</option>
-                    <option value="retrying">Retrying</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Target</label>
-                  <select id="log-target-filter" onchange="loadSystemLogs()">
-                    <option value="">All</option>
-                    <option value="cms">CMS</option>
-                    <option value="ros">ROS</option>
-                    <option value="wms">WMS</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Hours</label>
-                  <select id="log-hours-filter" onchange="loadSystemLogs()">
-                    <option value="6">Last 6h</option>
-                    <option value="24" selected>Last 24h</option>
-                    <option value="72">Last 3 days</option>
-                    <option value="168">Last 7 days</option>
-                  </select>
-                </div>
-              </div>
-              <div id="system-logs-list" class="table-container"></div>
-            </div>
-
-            <!-- Transactions sub-panel -->
+            <p class="muted" style="margin-bottom: 16px">
+              Key middleware connectivity &amp; health
+            </p>
             <div
-              id="logs-transactions-panel"
-              class="logs-sub-panel"
-              style="display: none"
-            >
-              <div class="filter-bar">
-                <div class="filter-group">
-                  <label>State</label>
-                  <select
-                    id="txn-state-filter"
-                    onchange="loadTransactionHistory()"
-                  >
-                    <option value="">All</option>
-                    <option value="completed">Completed</option>
-                    <option value="failed">Failed</option>
-                    <option value="compensated">Compensated</option>
-                    <option value="in_progress">In Progress</option>
-                  </select>
-                </div>
-              </div>
-              <div id="transactions-list" class="table-container"></div>
-            </div>
+              id="system-status-cards"
+              class="system-status-cards-grid"
+            ></div>
+          </div>
 
-            <!-- Audit Trail sub-panel -->
-            <div
-              id="logs-audit-panel"
-              class="logs-sub-panel"
-              style="display: none"
-            >
-              <div class="filter-bar">
-                <div class="filter-group">
-                  <label>Entity</label>
-                  <select id="audit-entity-filter" onchange="loadAuditTrail()">
-                    <option value="">All</option>
-                    <option value="order">Order</option>
-                    <option value="saga">Saga</option>
-                    <option value="tracking">Tracking</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Hours</label>
-                  <select id="audit-hours-filter" onchange="loadAuditTrail()">
-                    <option value="24" selected>Last 24h</option>
-                    <option value="72">Last 3 days</option>
-                    <option value="168">Last 7 days</option>
-                  </select>
-                </div>
-              </div>
-              <div id="audit-trail-list" class="table-container"></div>
+          <!-- ADMIN: Message Queue -->
+          <div id="message-queue-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>Message Queue</h2>
+              <button
+                class="btn-small btn-outline"
+                onclick="loadMessageQueue()"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
             </div>
+            <p class="muted" style="margin-bottom: 16px">
+              Asynchronous middleware message broker
+            </p>
+            <div id="mq-stats" class="mq-stats-row"></div>
+            <div
+              id="mq-table"
+              class="table-container"
+              style="margin-top: 20px"
+            ></div>
+          </div>
 
-            <!-- Error Summary sub-panel -->
-            <div
-              id="logs-errors-panel"
-              class="logs-sub-panel"
-              style="display: none"
-            >
-              <div id="error-summary-content"></div>
+          <!-- ADMIN: Integration Log -->
+          <div
+            id="integration-log-tab"
+            class="tab-content"
+            style="display: none"
+          >
+            <div class="tab-header">
+              <h2>Integration Log</h2>
+              <button
+                class="btn-small btn-outline"
+                onclick="loadIntegrationLog()"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
             </div>
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>System</label>
+                <select
+                  id="intlog-source-filter"
+                  onchange="loadIntegrationLog()"
+                >
+                  <option value="">All Systems</option>
+                  <option value="CMS">CMS</option>
+                  <option value="ROS">ROS</option>
+                  <option value="WMS">WMS</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Status</label>
+                <select
+                  id="intlog-status-filter"
+                  onchange="loadIntegrationLog()"
+                >
+                  <option value="">All</option>
+                  <option value="success">Success</option>
+                  <option value="failed">Failed</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+            </div>
+            <div id="intlog-events-list" class="table-container"></div>
+          </div>
+
+          <!-- ADMIN: Failed Messages -->
+          <div
+            id="failed-messages-tab"
+            class="tab-content"
+            style="display: none"
+          >
+            <div class="tab-header">
+              <h2>Failed Messages</h2>
+              <span id="fm-count" class="badge failed" style="margin-left: 8px"
+                >0</span
+              >
+              <button
+                class="btn-small btn-outline"
+                onclick="loadFailedMessagesTab()"
+                style="margin-left: auto"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <p class="muted" style="margin-bottom: 16px">
+              Messages that failed broker delivery &mdash; retry to resend
+            </p>
+            <div id="fm-list" class="table-container"></div>
           </div>
 
           <!-- ADMIN: User Management -->
@@ -669,122 +548,9 @@
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div class="filter-group">
-                <label>Priority</label>
-                <select
-                  id="admin-order-priority-filter"
-                  onchange="loadAllOrders()"
-                >
-                  <option value="">All Priorities</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
             </div>
-            <div id="all-orders-list" class="orders-grid"></div>
+            <div id="all-orders-list" class="table-container"></div>
             <div class="pagination" id="all-orders-pagination"></div>
-          </div>
-
-          <!-- ADMIN: Integration Events -->
-          <div id="integration-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>Integration Monitor</h2>
-              <button
-                class="btn-small btn-outline"
-                onclick="loadIntegrationEvents()"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-
-            <!-- Integration Health Cards -->
-            <div
-              id="integration-health-cards"
-              class="integration-cards"
-              style="margin-bottom: 20px"
-            ></div>
-
-            <!-- Failed Messages Section -->
-            <div class="card" style="margin-bottom: 20px">
-              <div
-                class="rd-card-header"
-                style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0"
-              >
-                <div class="rd-card-title">
-                  <h3>
-                    Failed Messages
-                    <span
-                      id="int-failed-count"
-                      class="badge failed"
-                      style="margin-left: 8px; display: none"
-                      >0</span
-                    >
-                  </h3>
-                </div>
-                <button
-                  class="btn-small btn-outline"
-                  onclick="loadIntegrationFailedMessages()"
-                >
-                  Refresh
-                </button>
-              </div>
-              <div
-                id="integration-failed-list"
-                style="padding: 16px 20px"
-              ></div>
-            </div>
-
-            <!-- Event Log Table -->
-            <div class="card">
-              <div
-                class="rd-card-header"
-                style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0"
-              >
-                <div class="rd-card-title"><h3>Integration Event Log</h3></div>
-              </div>
-              <div style="padding: 16px 20px">
-                <div class="filter-bar">
-                  <div class="filter-group">
-                    <label>Status</label>
-                    <select
-                      id="int-status-filter"
-                      onchange="loadIntegrationEventLog()"
-                    >
-                      <option value="">All Statuses</option>
-                      <option value="pending">Pending</option>
-                      <option value="success">Success</option>
-                      <option value="failed">Failed</option>
-                      <option value="retrying">Retrying</option>
-                    </select>
-                  </div>
-                  <div class="filter-group">
-                    <label>System</label>
-                    <select
-                      id="int-source-filter"
-                      onchange="loadIntegrationEventLog()"
-                    >
-                      <option value="">All Systems</option>
-                      <option value="CMS">CMS (SOAP/XML)</option>
-                      <option value="ROS">ROS (REST/JSON)</option>
-                      <option value="WMS">WMS (TCP/IP)</option>
-                    </select>
-                  </div>
-                </div>
-                <div id="integration-events-list" class="table-container"></div>
-              </div>
-            </div>
           </div>
 
           <!-- ADMIN: Manifests -->
@@ -812,7 +578,6 @@
             <div id="all-manifests-list"></div>
           </div>
 
-          <!-- ══════════════════════════════════════════════════ -->
           <!-- CLIENT: My Orders -->
           <div
             id="client-dashboard-tab"
@@ -824,18 +589,43 @@
                 <div>
                   <h2>Dashboard</h2>
                   <p class="muted">
-                    Create orders, monitor progress, and track deliveries in
-                    real time.
+                    Overview of your orders and live delivery tracking.
                   </p>
                 </div>
                 <button
                   class="btn-small btn-primary"
                   onclick="switchTab('new-order')"
                 >
-                  Create Order
+                  New Order
                 </button>
               </div>
 
+              <!-- Stat Cards -->
+              <div class="client-stat-cards">
+                <div class="client-stat-card">
+                  <div class="client-stat-icon submitted">📦</div>
+                  <div class="client-stat-info">
+                    <div id="stat-submitted" class="client-stat-value">0</div>
+                    <div class="client-stat-label">Orders Submitted</div>
+                  </div>
+                </div>
+                <div class="client-stat-card">
+                  <div class="client-stat-icon transit">🚚</div>
+                  <div class="client-stat-info">
+                    <div id="stat-transit" class="client-stat-value">0</div>
+                    <div class="client-stat-label">In Transit</div>
+                  </div>
+                </div>
+                <div class="client-stat-card">
+                  <div class="client-stat-icon delivered">✅</div>
+                  <div class="client-stat-info">
+                    <div id="stat-delivered" class="client-stat-value">0</div>
+                    <div class="client-stat-label">Delivered</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recent Orders + Live Tracking -->
               <div class="client-dash-grid">
                 <div class="card">
                   <h3>Recent Orders</h3>
@@ -861,7 +651,7 @@
                       >
                       <button
                         class="btn-xs btn-outline"
-                        onclick="switchTab('tracking')"
+                        onclick="switchTab('track-delivery')"
                       >
                         Open tracking
                       </button>
@@ -875,7 +665,10 @@
           <div id="orders-tab" class="tab-content" style="display: none">
             <div class="tab-header">
               <h2>My Orders</h2>
-              <button class="btn-small btn-outline" onclick="loadOrders()">
+              <button
+                class="btn-small btn-outline"
+                onclick="loadClientOrders()"
+              >
                 <svg
                   width="16"
                   height="16"
@@ -890,7 +683,7 @@
                 Refresh
               </button>
             </div>
-            <div id="orders-list" class="table-container"></div>
+            <div id="client-orders-table" class="table-container"></div>
           </div>
 
           <!-- CLIENT / ADMIN: New Order -->
@@ -989,6 +782,48 @@
             </div>
           </div>
 
+          <!-- TRACK DELIVERY (Client) -->
+          <div
+            id="track-delivery-tab"
+            class="tab-content"
+            style="display: none"
+          >
+            <div class="tab-header">
+              <h2>Track Delivery</h2>
+            </div>
+            <div class="track-input">
+              <input
+                type="text"
+                id="td-order-id"
+                placeholder="Enter Order ID (UUID)"
+              />
+              <button onclick="trackDelivery()" class="btn-primary">
+                Connect
+              </button>
+            </div>
+            <div id="td-ws-status" class="ws-badge disconnected">
+              &#9679; Disconnected
+            </div>
+            <div
+              id="td-progress-wrap"
+              class="td-progress-wrap"
+              style="display: none"
+            >
+              <div class="td-progress-header">
+                <span id="td-progress-label">0%</span>
+              </div>
+              <div class="td-progress-track">
+                <div
+                  id="td-progress-bar"
+                  class="td-progress-bar"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+            <div id="td-tracking-result"></div>
+            <div id="td-live-feed" class="td-live-feed"></div>
+          </div>
+
           <!-- TRACKING: Any role -->
           <div id="tracking-tab" class="tab-content" style="display: none">
             <div class="tab-header">
@@ -1009,7 +844,7 @@
             <div id="live-updates"></div>
           </div>
 
-          <!-- DRIVER: My Manifests -->
+          <!-- DRIVER: Dashboard -->
           <div
             id="driver-dashboard-tab"
             class="tab-content"
@@ -1018,70 +853,198 @@
             <div id="driver-dashboard-root"></div>
           </div>
 
+          <!-- DRIVER: My Manifest -->
+          <div id="my-manifest-tab" class="tab-content" style="display: none">
+            <div class="tab-header">
+              <h2>My Manifest</h2>
+              <button class="btn-small btn-outline" onclick="loadMyManifest()">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <p class="muted" style="margin-bottom: 14px">
+              Deliveries assigned for today. Stop order optimised by the Route
+              Optimisation System (ROS).
+            </p>
+            <div id="manifest-stops-list"></div>
+          </div>
+
+          <!-- DRIVER: Update Delivery -->
+          <div
+            id="update-delivery-tab"
+            class="tab-content"
+            style="display: none"
+          >
+            <div class="tab-header">
+              <h2>Update Delivery</h2>
+            </div>
+            <div class="card form-card" style="max-width: 640px">
+              <div class="form-group">
+                <label>Select Order <span class="required">*</span></label>
+                <select id="ud-order-select" onchange="loadUdOrderDetails()">
+                  <option value="">— Select an order —</option>
+                </select>
+              </div>
+              <div id="ud-order-info" style="display: none">
+                <div class="delivery-details-section">
+                  <h4 style="margin-bottom: 8px">Delivery Details</h4>
+                  <div id="ud-info-grid" class="delivery-info-grid"></div>
+                </div>
+                <div class="form-group">
+                  <label>Status <span class="required">*</span></label>
+                  <select id="ud-status" onchange="toggleUdSections()">
+                    <option value="picked_up">Picked Up</option>
+                    <option value="in_transit">In Transit</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+                <!-- Failure section -->
+                <div id="ud-failure-section" style="display: none">
+                  <div class="form-group">
+                    <label
+                      >Failure Reason <span class="required">*</span></label
+                    >
+                    <select id="ud-failure-reason" onchange="toggleUdOther()">
+                      <option value="">Select reason</option>
+                      <option value="Customer not available">
+                        Customer not available
+                      </option>
+                      <option value="Wrong address">Wrong address</option>
+                      <option value="Customer refused">Customer refused</option>
+                      <option value="Package damaged">Package damaged</option>
+                      <option value="Access denied">Access denied</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <input
+                    type="text"
+                    id="ud-failure-other"
+                    placeholder="Specify reason..."
+                    style="display: none; margin-bottom: 12px"
+                  />
+                </div>
+                <!-- POD section -->
+                <div id="ud-pod-section" style="display: none">
+                  <h4 style="margin: 14px 0 8px">Proof of Delivery</h4>
+                  <div class="form-group">
+                    <label>Signature</label>
+                    <div class="signature-container">
+                      <canvas
+                        id="ud-signature-canvas"
+                        width="400"
+                        height="150"
+                      ></canvas>
+                      <div class="signature-actions">
+                        <button
+                          class="btn-xs btn-outline"
+                          type="button"
+                          onclick="clearUdSignature()"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Photo</label>
+                    <div class="photo-capture-container">
+                      <div id="ud-photo-preview" class="photo-preview">
+                        <span class="photo-placeholder">No photo captured</span>
+                      </div>
+                      <div class="photo-actions">
+                        <label
+                          class="btn-xs btn-small btn-outline"
+                          style="cursor: pointer"
+                        >
+                          📷 Upload Photo
+                          <input
+                            type="file"
+                            id="ud-photo-input"
+                            accept="image/*"
+                            onchange="handleUdPhotoSelect(event)"
+                            style="display: none"
+                          />
+                        </label>
+                        <button
+                          class="btn-xs btn-small btn-outline"
+                          onclick="clearUdPhoto()"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Notes (optional)</label>
+                  <textarea
+                    id="ud-notes"
+                    rows="2"
+                    placeholder="Additional notes..."
+                  ></textarea>
+                </div>
+                <button
+                  onclick="submitUdUpdate()"
+                  class="btn-primary"
+                  style="margin-top: 14px"
+                >
+                  Submit Update
+                </button>
+                <div id="ud-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DRIVER: Route -->
           <div id="route-map-tab" class="tab-content" style="display: none">
             <div class="tab-header">
-              <h2>Route Map</h2>
+              <h2>Route</h2>
             </div>
-            <div class="card">
+            <div
+              id="route-summary-stats"
+              class="route-summary-stats"
+              style="display: none"
+            >
+              <div class="route-stat">
+                <strong id="route-total-stops">0</strong><span>Stops</span>
+              </div>
+              <div class="route-stat">
+                <strong id="route-distance">—</strong
+                ><span>Total Distance</span>
+              </div>
+              <div class="route-stat">
+                <strong id="route-time">—</strong><span>Est. Time</span>
+              </div>
+            </div>
+            <div id="route-stops-list" class="route-stops-list"></div>
+            <div class="card" style="margin-top: 14px">
               <div
                 class="mini-map"
                 role="img"
                 aria-label="Route map placeholder"
               >
                 <div class="mini-map-grid"></div>
-                <div class="mini-map-pin p1"></div>
-                <div class="mini-map-pin p2"></div>
-                <div class="mini-map-pin p3"></div>
+                <div id="route-map-pins"></div>
                 <div class="mini-map-line"></div>
-                <div class="mini-map-label">Interactive map placeholder</div>
+                <div class="mini-map-label" id="route-map-label">
+                  Interactive map placeholder
+                </div>
               </div>
             </div>
-          </div>
-
-          <div id="update-status-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>Update Status</h2>
-              <button class="btn-small btn-outline" onclick="loadManifests()">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-            <div id="driver-manifests-status"></div>
-          </div>
-
-          <!-- DRIVER: Assigned Orders -->
-          <div id="driver-orders-tab" class="tab-content" style="display: none">
-            <div class="tab-header">
-              <h2>Assigned Orders</h2>
-              <button
-                onclick="loadDriverOrders()"
-                class="btn-small btn-outline"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-            <div id="driver-orders-list" class="orders-grid"></div>
+            <p class="route-ros-label">
+              Route generated by Route Optimisation System
+            </p>
           </div>
 
           <!-- PROFILE: Any role -->

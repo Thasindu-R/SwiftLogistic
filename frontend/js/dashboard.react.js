@@ -1,43 +1,106 @@
 /*
- * Embedded React dashboards (Admin / Client / Driver)
- * - Uses React UMD globals (React, ReactDOM)
- * - Preserves existing element IDs that app.js populates.
+ * SwiftTrack — Oceanic Command Dashboards
+ * Theme  : Deep-sea navy · Electric cyan
+ * Fonts  : Syne (display) · Plus Jakarta Sans (body)
+ * Preserves all element IDs consumed by app.js
  */
 
 (function () {
+  "use strict";
   const e = React.createElement;
 
-  function IconRefresh(props) {
+  /* ═══════════════════════════════════════════════
+     ICON PRIMITIVES
+  ═══════════════════════════════════════════════ */
+
+  function Svg({ size = 16, vb = "0 0 24 24", children, className }) {
     return e(
       "svg",
       {
-        width: props.size || 16,
-        height: props.size || 16,
-        viewBox: "0 0 24 24",
+        width: size,
+        height: size,
+        viewBox: vb,
         fill: "none",
         stroke: "currentColor",
-        strokeWidth: 2,
+        strokeWidth: 1.75,
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        style: { flexShrink: 0, display: "block" },
+        className,
       },
-      e("polyline", { points: "23 4 23 10 17 10" }),
-      e("path", { d: "M20.49 15a9 9 0 11-2.12-9.36L23 10" }),
+      ...children,
     );
   }
 
-  function DashHero(props) {
+  const IRefresh = ({ size = 14 }) =>
+    e(
+      Svg,
+      { size },
+      e("polyline", { points: "23 4 23 10 17 10" }),
+      e("path", { d: "M20.49 15a9 9 0 11-2.12-9.36L23 10" }),
+    );
+
+  const IPlus = ({ size = 13 }) =>
+    e(
+      Svg,
+      { size },
+      e("line", { x1: "12", y1: "5", x2: "12", y2: "19" }),
+      e("line", { x1: "5", y1: "12", x2: "19", y2: "12" }),
+    );
+
+  const IBell = ({ size = 18 }) =>
+    e(
+      Svg,
+      { size },
+      e("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }),
+      e("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" }),
+    );
+
+  const ICompass = ({ size = 16 }) =>
+    e(
+      Svg,
+      { size },
+      e("circle", { cx: "12", cy: "12", r: "10" }),
+      e("polygon", {
+        points: "16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76",
+      }),
+    );
+
+  /* ═══════════════════════════════════════════════
+     SHARED COMPONENTS
+  ═══════════════════════════════════════════════ */
+
+  /* Pill button in card header */
+  function PillBtn({ onClick, label = "Refresh", icon }) {
+    return e(
+      "button",
+      {
+        className: "btn-xs btn-small btn-outline",
+        onClick,
+        style: { display: "inline-flex", alignItems: "center", gap: 5 },
+      },
+      icon || e(IRefresh),
+      label,
+    );
+  }
+
+  /* Dashboard hero banner */
+  function Hero({ title, subtitle, actions }) {
     return e(
       "div",
       { className: "rd-hero" },
       e(
         "div",
-        { className: "rd-hero-left" },
-        e("h2", { className: "rd-title" }, props.title),
-        e("p", { className: "rd-subtitle" }, props.subtitle || ""),
+        null,
+        e("h2", { className: "rd-title" }, title),
+        subtitle && e("p", { className: "rd-subtitle" }, subtitle),
       ),
-      e("div", { className: "rd-hero-right" }, props.actions || null),
+      actions && e("div", { className: "rd-actions" }, actions),
     );
   }
 
-  function Card(props) {
+  /* Card wrapper */
+  function Panel({ title, badge, action, children, noPad }) {
     return e(
       "section",
       { className: "rd-card" },
@@ -47,22 +110,61 @@
         e(
           "div",
           { className: "rd-card-title" },
-          e("h3", null, props.title),
-          props.badge || null,
+          e("h3", null, title),
+          badge || null,
         ),
-        props.headerAction || null,
+        action || null,
       ),
-      e("div", { className: "rd-card-body" }, props.children),
+      e(
+        "div",
+        {
+          className: "rd-card-body",
+          style: noPad ? { padding: 0 } : undefined,
+        },
+        children,
+      ),
     );
   }
 
+  /* Inline badge chip */
+  function Chip({
+    text,
+    color = "var(--accent)",
+    bg = "var(--accent-dim)",
+    border = "var(--border)",
+  }) {
+    return e(
+      "span",
+      {
+        style: {
+          fontSize: "0.68rem",
+          fontWeight: 800,
+          color,
+          background: bg,
+          border: `1px solid ${border}`,
+          padding: "2px 8px",
+          borderRadius: 999,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          whiteSpace: "nowrap",
+        },
+      },
+      text,
+    );
+  }
+
+  /* ═══════════════════════════════════════════════
+     ADMIN DASHBOARD
+  ═══════════════════════════════════════════════ */
+
   function AdminDashboard() {
-    const onRefreshSystem = () =>
-      window.loadSystemStatus && window.loadSystemStatus();
+    const refresh = () => window.loadAdminDashboard?.();
 
     return e(
       "div",
       { className: "rd-shell" },
+
+      /* Greeting banner with clock */
       e(
         "div",
         { className: "rd-admin-hero" },
@@ -86,153 +188,127 @@
             e("div", { className: "dash-greeting-date", id: "dash-date" }),
           ),
         ),
-        e("div", {
-          id: "dash-alerts",
-          className: "dash-alerts",
-          style: { display: "none" },
-        }),
       ),
 
       e(
         "div",
         { className: "rd-grid" },
+
+        /* 4 Stat Cards */
         e(
           "div",
           { className: "rd-col-span-12" },
-          Card({
-            title: "Order Overview",
-            children: e("div", { id: "stats-cards", className: "stats-grid" }),
-          }),
+          e(
+            Panel,
+            { title: "Order Overview", action: e(Chip, { text: "Live" }) },
+            e("div", { id: "stats-cards", className: "stats-grid" }),
+          ),
         ),
 
-        e(
-          "div",
-          { className: "rd-col-span-7" },
-          Card({
-            title: "System Status",
-            headerAction: e(
-              "button",
-              { className: "btn-xs btn-small", onClick: onRefreshSystem },
-              e(IconRefresh, { size: 14 }),
-              " ",
-              "Refresh",
-            ),
-            children: e("div", {
-              id: "system-status-grid",
-              className: "system-status-grid",
-            }),
-          }),
-        ),
-
-        e(
-          "div",
-          { className: "rd-col-span-5" },
-          Card({
-            title: "Integrations (CMS / ROS / WMS)",
-            children: e("div", {
-              id: "integration-status-cards",
-              className: "integration-cards",
-            }),
-          }),
-        ),
-
+        /* System Health — 3 dots */
         e(
           "div",
           { className: "rd-col-span-12" },
-          Card({
-            title: "Failed Messages",
-            badge: e("span", {
-              id: "failed-msg-count",
-              className: "badge failed",
-              style: { marginLeft: 10 },
+          e(
+            Panel,
+            {
+              title: "System Health",
+              action: e(PillBtn, { onClick: refresh }),
+            },
+            e("div", {
+              id: "admin-health-dots",
+              className: "health-dots-row",
             }),
-            children: e("div", {
-              id: "failed-messages-list",
-              className: "failed-messages-list",
-            }),
-          }),
+          ),
         ),
 
+        /* Recent Activity Feed */
         e(
           "div",
-          { className: "rd-col-span-6" },
-          Card({
-            title: "Recent Orders",
-            children: e("div", { id: "admin-recent-orders" }),
-          }),
-        ),
-
-        e(
-          "div",
-          { className: "rd-col-span-6" },
-          Card({
-            title: "Recent Events",
-            children: e("div", { id: "admin-recent-events" }),
-          }),
+          { className: "rd-col-span-12" },
+          e(
+            Panel,
+            {
+              title: "Recent Activity",
+              action: e(PillBtn, { onClick: refresh }),
+            },
+            e("div", {
+              id: "admin-activity-feed",
+              className: "activity-feed",
+            }),
+          ),
         ),
       ),
     );
   }
+
+  /* ═══════════════════════════════════════════════
+     CLIENT DASHBOARD
+  ═══════════════════════════════════════════════ */
 
   function ClientDashboard() {
-    const onRefresh = () => window.loadOrders && window.loadOrders();
-
     return e(
       "div",
       { className: "rd-shell" },
-      e(DashHero, {
+
+      e(Hero, {
         title: "My Orders",
-        subtitle: "Track progress, view details, and create new deliveries.",
+        subtitle: "Track progress, view details, and submit new deliveries.",
         actions: e(
           "div",
-          { className: "rd-actions" },
+          { style: { display: "flex", gap: 8 } },
           e(
             "button",
-            { className: "btn-small btn-outline", onClick: onRefresh },
-            e(IconRefresh, null),
-            " ",
-            "Refresh",
+            {
+              className: "btn-small btn-primary",
+              style: {
+                width: "auto",
+                marginTop: 0,
+                padding: "7px 16px",
+                fontSize: "0.82rem",
+              },
+              onClick: () => window.switchTab?.("new-order"),
+            },
+            e(IPlus),
+            " New Order",
           ),
+          e(PillBtn, { onClick: () => window.loadOrders?.() }),
         ),
       }),
+
       e(
         "div",
         { className: "rd-grid" },
         e(
           "div",
           { className: "rd-col-span-12" },
-          Card({
-            title: "Orders",
-            children: e("div", { id: "orders-list", className: "orders-grid" }),
-          }),
+          e(
+            Panel,
+            { title: "Orders" },
+            e("div", { id: "orders-list", className: "orders-grid" }),
+          ),
         ),
       ),
     );
   }
 
-  function DriverDashboard() {
-    const onRefresh = () => window.loadManifests && window.loadManifests();
+  /* ═══════════════════════════════════════════════
+     DRIVER DASHBOARD
+  ═══════════════════════════════════════════════ */
 
+  function DriverDashboard() {
     return e(
       "div",
       { className: "rd-shell" },
-      e(DashHero, {
-        title: "My Deliveries",
+
+      e(Hero, {
+        title: "Driver Dashboard",
         subtitle:
-          "Review manifests, follow route guidance, and complete deliveries.",
-        actions: e(
-          "div",
-          { className: "rd-actions" },
-          e(
-            "button",
-            { className: "btn-small btn-outline", onClick: onRefresh },
-            e(IconRefresh, null),
-            " ",
-            "Refresh",
-          ),
-        ),
+          "Today's summary — deliveries, routes, and status at a glance.",
+        actions: e(PillBtn, { onClick: () => window.loadDriverDashboard?.() }),
       }),
 
+      /* Urgent push notification banner */
       e(
         "div",
         {
@@ -243,27 +319,13 @@
         e(
           "div",
           { className: "notification-banner urgent" },
-          e(
-            "svg",
-            {
-              width: 20,
-              height: 20,
-              viewBox: "0 0 24 24",
-              fill: "none",
-              stroke: "currentColor",
-              strokeWidth: 2,
-            },
-            e("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }),
-            e("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" }),
-          ),
+          e(IBell, { size: 17 }),
           e("span", { id: "driver-notification-text" }),
           e(
             "button",
             {
-              onClick: () =>
-                window.dismissDriverNotification &&
-                window.dismissDriverNotification(),
               className: "btn-dismiss",
+              onClick: () => window.dismissDriverNotification?.(),
             },
             "×",
           ),
@@ -273,12 +335,15 @@
       e(
         "div",
         { className: "rd-grid" },
+
+        /* Daily summary stats — 4 cards */
         e(
           "div",
           { className: "rd-col-span-12" },
-          Card({
-            title: "Today",
-            children: e(
+          e(
+            Panel,
+            { title: "Today's Summary" },
+            e(
               "div",
               { className: "driver-summary", id: "driver-summary" },
               e(
@@ -289,11 +354,7 @@
                   { className: "driver-stat-value", id: "ds-total" },
                   "0",
                 ),
-                e(
-                  "span",
-                  { className: "driver-stat-label" },
-                  "Total Deliveries",
-                ),
+                e("span", { className: "driver-stat-label" }, "Total"),
               ),
               e(
                 "div",
@@ -326,77 +387,41 @@
                 e("span", { className: "driver-stat-label" }, "Failed"),
               ),
             ),
-          }),
+          ),
         ),
 
+        /* Today's manifest preview (first 3 stops) */
         e(
           "div",
           { className: "rd-col-span-12" },
           e(
-            "div",
+            Panel,
             {
-              className: "route-info-card",
-              id: "route-info-card",
-              style: { display: "none" },
+              title: "Today's Manifest Preview",
+              action: e(PillBtn, {
+                onClick: () => window.switchTab?.("my-manifest"),
+                label: "View All",
+              }),
             },
-            e(
-              "h3",
-              null,
-              e(
-                "svg",
-                {
-                  width: 18,
-                  height: 18,
-                  viewBox: "0 0 24 24",
-                  fill: "none",
-                  stroke: "currentColor",
-                  strokeWidth: 2,
-                },
-                e("circle", { cx: "12", cy: "12", r: "10" }),
-                e("polygon", {
-                  points:
-                    "16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76",
-                }),
-              ),
-              " ",
-              "Optimized Route",
-            ),
-            e("div", { id: "route-details" }),
+            e("div", { id: "driver-manifest-preview" }),
           ),
-        ),
-
-        e(
-          "div",
-          { className: "rd-col-span-12" },
-          Card({
-            title: "Manifests",
-            headerAction: e(
-              "button",
-              { className: "btn-small btn-outline", onClick: onRefresh },
-              e(IconRefresh, null),
-              " ",
-              "Refresh",
-            ),
-            children: e("div", { id: "driver-manifests" }),
-          }),
         ),
       ),
     );
   }
 
+  /* ═══════════════════════════════════════════════
+     MOUNT
+  ═══════════════════════════════════════════════ */
+
   function safeMount(rootId, element) {
-    const rootEl = document.getElementById(rootId);
-    if (!rootEl) return;
-
-    // Prevent double-mounting in case showDashboard is called multiple times.
-    if (rootEl.__reactMounted) return;
-    rootEl.__reactMounted = true;
-
-    const root = ReactDOM.createRoot(rootEl);
-    root.render(element);
+    const root = document.getElementById(rootId);
+    if (!root || root.__reactMounted) return;
+    root.__reactMounted = true;
+    ReactDOM.createRoot(root).render(element);
   }
 
-  window.mountDashboards = function mountDashboards() {
+  window.mountDashboards = function () {
     safeMount("admin-dashboard-root", e(AdminDashboard));
     safeMount("client-dashboard-root", e(ClientDashboard));
     safeMount("driver-dashboard-root", e(DriverDashboard));
