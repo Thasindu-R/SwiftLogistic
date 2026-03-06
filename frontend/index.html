@@ -822,7 +822,24 @@
                     min="0.1"
                     value="1.0"
                     required
+                    oninput="updatePriceEstimate()"
                   />
+                </div>
+                <div class="form-group">
+                  <label>Estimated Price</label>
+                  <div
+                    id="order-price-estimate"
+                    style="
+                      padding: 10px 14px;
+                      background: var(--bg-secondary, #f3f4f6);
+                      border-radius: 8px;
+                      font-weight: 600;
+                      color: var(--accent, #3b82f6);
+                      font-size: 1.05rem;
+                    "
+                  >
+                    LKR 150.00
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>Recipient Name <span class="required">*</span></label>

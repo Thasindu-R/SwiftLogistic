@@ -1210,6 +1210,7 @@ async function loadMyManifest() {
               <tr><td><strong>Package</strong></td><td>${escapeHtml(order.package_description || "—")} (${order.package_weight || 0} kg)</td></tr>
               <tr><td><strong>Phone</strong></td><td>${escapeHtml(order.recipient_phone || "—")}</td></tr>
               <tr><td><strong>Priority</strong></td><td><span class="badge ${order.priority || "normal"}">${order.priority || "normal"}</span></td></tr>
+              <tr><td><strong>Est. Cost</strong></td><td>${order.estimated_cost ? "LKR " + order.estimated_cost.toFixed(2) : "—"}</td></tr>
               <tr><td><strong>Notes</strong></td><td>${escapeHtml(order.notes || "None")}</td></tr>
               ${item.proof_of_delivery ? '<tr><td><strong>POD</strong></td><td style="color:var(--success)">✓ Proof of delivery captured</td></tr>' : ""}
             </table>
@@ -1298,6 +1299,7 @@ async function loadUdOrderDetails() {
       <div class="delivery-info-item"><div class="delivery-info-label">Phone</div><div class="delivery-info-value">${escapeHtml(order.recipient_phone || "N/A")}</div></div>
       <div class="delivery-info-item"><div class="delivery-info-label">Address</div><div class="delivery-info-value">${escapeHtml(order.delivery_address || "N/A")}</div></div>
       <div class="delivery-info-item"><div class="delivery-info-label">Package</div><div class="delivery-info-value">${escapeHtml(order.package_description || "N/A")} (${order.package_weight || 0} kg)</div></div>
+      <div class="delivery-info-item"><div class="delivery-info-label">Est. Cost</div><div class="delivery-info-value">${order.estimated_cost ? "LKR " + order.estimated_cost.toFixed(2) : "N/A"}</div></div>
       <div class="delivery-info-item"><div class="delivery-info-label">Priority</div><div class="delivery-info-value"><span class="badge ${order.priority}">${order.priority || "normal"}</span></div></div>
       <div class="delivery-info-item"><div class="delivery-info-label">Notes</div><div class="delivery-info-value">${escapeHtml(order.notes || "None")}</div></div>
     `;
@@ -2354,6 +2356,7 @@ async function loadAllOrders(page) {
             <td class="mono">${shortId(o.order_id)}</td>
             <td>${escapeHtml(o.recipient_name || "—")}</td>
             <td><span class="badge ${o.status}">${o.status.replace(/_/g, " ")}</span></td>
+            <td>${o.estimated_cost ? "LKR " + o.estimated_cost.toFixed(2) : "—"}</td>
             <td>${fmtDate(o.created_at)}</td>
             <td>${assignCell}</td>
             <td>${actionBtn}</td>
@@ -2626,6 +2629,7 @@ async function loadClientOrders() {
             <th>Order ID</th>
             <th>Recipient</th>
             <th>Status</th>
+            <th>Est. Cost</th>
             <th>Date</th>
             <th style="text-align:center">Action</th>
           </tr>
@@ -2638,6 +2642,7 @@ async function loadClientOrders() {
               <td class="mono">${shortId(o.order_id)}</td>
               <td>${escapeHtml(o.recipient_name || "—")}</td>
               <td><span class="badge ${escapeHtml(o.status)}">${escapeHtml(String(o.status || "").replace(/_/g, " "))}</span></td>
+              <td>${o.estimated_cost ? "LKR " + o.estimated_cost.toFixed(2) : "—"}</td>
               <td>${fmtDate(o.created_at)}</td>
               <td class="order-row-actions" onclick="event.stopPropagation()">
                 <button class="btn-xs btn-small" onclick="trackDeliveryById('${o.order_id}')">Track</button>
@@ -2679,6 +2684,7 @@ async function loadDriverOrders() {
         <div style="text-align:right">
           <span class="badge ${o.status}">${o.status.replace(/_/g, " ")}</span>
           <span class="badge ${o.priority}">${o.priority}</span>
+          ${o.estimated_cost ? `<div style="font-size:0.8rem;color:#666;margin-top:4px">Est: LKR ${o.estimated_cost.toFixed(2)}</div>` : ""}
           <div class="order-actions">
             <button class="btn-xs btn-small" onclick="trackOrderById('${o.order_id}')">Track</button>
             ${o.status === "confirmed" ? `<button class="btn-xs btn-small btn-success" onclick="updateOrderStatus('${o.order_id}','in_transit')">Start Delivery</button>` : ""}
@@ -2729,7 +2735,7 @@ function renderOrderCards(orders, containerId, isAdmin) {
         <div style="text-align:right">
           <span class="badge ${o.status}">${o.status.replace(/_/g, " ")}</span>
           <span class="badge ${o.priority}">${o.priority}</span>
-          ${o.estimated_cost ? `<div style="font-size:0.8rem;color:#666;margin-top:4px">Est: $${o.estimated_cost}</div>` : ""}
+          ${o.estimated_cost ? `<div style="font-size:0.8rem;color:#666;margin-top:4px">Est: LKR ${o.estimated_cost.toFixed(2)}</div>` : ""}
           <div class="order-actions">${actions}</div>
         </div>
       </div>`;
@@ -2753,7 +2759,7 @@ async function viewOrderDetail(orderId) {
         <tr><td><strong>Package</strong></td><td>${o.package_description} (${o.package_weight} kg)</td></tr>
         <tr><td><strong>Recipient</strong></td><td>${o.recipient_name} (${o.recipient_phone || "-"})</td></tr>
         <tr><td><strong>Driver</strong></td><td>${o.assigned_driver_id || "Not assigned"}</td></tr>
-        <tr><td><strong>Est. Cost</strong></td><td>${o.estimated_cost ? "$" + o.estimated_cost : "-"}</td></tr>
+        <tr><td><strong>Est. Cost</strong></td><td>${o.estimated_cost ? "LKR " + o.estimated_cost.toFixed(2) : "-"}</td></tr>
         <tr><td><strong>Notes</strong></td><td>${o.notes || "-"}</td></tr>
         <tr><td><strong>Created</strong></td><td>${fmtDate(o.created_at)}</td></tr>
         <tr><td><strong>Updated</strong></td><td>${fmtDate(o.updated_at)}</td></tr>
@@ -2817,6 +2823,13 @@ async function updateOrderStatus(orderId, status) {
 /* ══════════════════════════════════════════════════════════ */
 /*  SUBMIT NEW ORDER                                         */
 /* ══════════════════════════════════════════════════════════ */
+function updatePriceEstimate() {
+  const weight = parseFloat($("order-weight").value) || 0;
+  const price = Math.max(0, weight * 150).toFixed(2);
+  const el = $("order-price-estimate");
+  if (el) el.textContent = `LKR ${price}`;
+}
+
 function validateOrderForm() {
   const errors = [];
   const pickup = $("order-pickup").value.trim();
@@ -2879,6 +2892,7 @@ async function submitOrder() {
       "order-notes",
     ].forEach((id) => ($(id).value = ""));
     $("order-weight").value = "1.0";
+    updatePriceEstimate();
   } catch (e) {
     $("order-result").innerHTML = `<p class="error">${e.message}</p>`;
   }
