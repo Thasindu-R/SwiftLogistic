@@ -242,6 +242,10 @@ function showLogin() {
   const registerForm = $("register-form");
   if (loginForm) loginForm.style.display = "block";
   if (registerForm) registerForm.style.display = "none";
+  const heading = document.querySelector(".auth-card h2");
+  if (heading) heading.textContent = "Welcome Back";
+  const divider = document.querySelector(".auth-divider");
+  if (divider) divider.textContent = "Sign in to continue";
   const err = $("auth-error");
   if (err) err.textContent = "";
 }
@@ -250,6 +254,10 @@ function showRegister() {
   const registerForm = $("register-form");
   if (loginForm) loginForm.style.display = "none";
   if (registerForm) registerForm.style.display = "block";
+  const heading = document.querySelector(".auth-card h2");
+  if (heading) heading.textContent = "Create Account";
+  const divider = document.querySelector(".auth-divider");
+  if (divider) divider.textContent = "Register a new account";
   const err = $("auth-error");
   if (err) err.textContent = "";
 }
@@ -296,6 +304,13 @@ function forgotPassword() {
 }
 
 async function register() {
+  const btn = $("register-btn");
+  const err = $("auth-error");
+  if (err) err.textContent = "";
+  if (btn) {
+    btn.classList.add("is-loading");
+    btn.disabled = true;
+  }
   try {
     const data = await api("POST", "/api/auth/register", {
       username: $("reg-username").value,
@@ -303,10 +318,18 @@ async function register() {
       full_name: $("reg-fullname").value,
       phone: $("reg-phone").value,
       password: $("reg-password").value,
+      role: $("reg-role").value,
     });
+    toast("Account created successfully!", "success");
     setAuthState(data.access_token, data.user);
   } catch (e) {
-    $("auth-error").textContent = e.message;
+    if (err) err.textContent = e.message;
+    toast(e.message || "Registration failed.", "error");
+  } finally {
+    if (btn) {
+      btn.classList.remove("is-loading");
+      btn.disabled = false;
+    }
   }
 }
 

@@ -168,6 +168,102 @@
                 <span class="btn-label">Sign In</span>
                 <span class="btn-spinner" aria-hidden="true"></span>
               </button>
+
+              <div
+                class="auth-switch"
+                style="text-align: center; margin-top: 1rem"
+              >
+                <span
+                  style="color: var(--text-muted, #6b7280); font-size: 0.875rem"
+                  >Don't have an account?</span
+                >
+                <button
+                  class="link-btn"
+                  type="button"
+                  onclick="showRegister()"
+                  style="font-size: 0.875rem"
+                >
+                  Register here
+                </button>
+              </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" style="display: none">
+              <div class="form-group">
+                <label for="reg-username">Username</label>
+                <input
+                  type="text"
+                  id="reg-username"
+                  placeholder="Choose a username"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-email">Email</label>
+                <input
+                  type="email"
+                  id="reg-email"
+                  placeholder="your@email.com"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-fullname">Full Name</label>
+                <input
+                  type="text"
+                  id="reg-fullname"
+                  placeholder="Enter your full name"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-phone">Phone</label>
+                <input
+                  type="tel"
+                  id="reg-phone"
+                  placeholder="e.g. 07XXXXXXXX"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-role">Register as</label>
+                <select id="reg-role">
+                  <option value="client">Client</option>
+                  <option value="driver">Driver</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reg-password">Password</label>
+                <input
+                  type="password"
+                  id="reg-password"
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+
+              <button
+                id="register-btn"
+                onclick="register()"
+                class="btn-primary"
+              >
+                <span class="btn-label">Create Account</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
+              </button>
+
+              <div
+                class="auth-switch"
+                style="text-align: center; margin-top: 1rem"
+              >
+                <span
+                  style="color: var(--text-muted, #6b7280); font-size: 0.875rem"
+                  >Already have an account?</span
+                >
+                <button
+                  class="link-btn"
+                  type="button"
+                  onclick="showLogin()"
+                  style="font-size: 0.875rem"
+                >
+                  Sign in
+                </button>
+              </div>
             </div>
             <div id="auth-error" class="error"></div>
           </div>

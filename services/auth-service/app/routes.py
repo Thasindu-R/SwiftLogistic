@@ -56,7 +56,7 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
         phone=payload.phone,
-        role="client",  # self-register always client
+        role=payload.role.value,
     )
     db.add(user)
     await db.flush()

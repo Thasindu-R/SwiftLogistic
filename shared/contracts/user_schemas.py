@@ -3,22 +3,30 @@
 from datetime import datetime
 from typing import Optional
 
+from enum import Enum
+
 from pydantic import BaseModel, EmailStr, Field
 
 
 # ── Auth schemas ─────────────────────────────────────────────
+class SelfRegisterRole(str, Enum):
+    client = "client"
+    driver = "driver"
+
+
 class UserLogin(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
 
 
 class UserRegister(BaseModel):
-    """Self-registration (creates client accounts only)."""
+    """Self-registration for client or driver accounts."""
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     full_name: str = Field(..., min_length=1, max_length=100)
     phone: str = Field(default="", max_length=20)
     password: str = Field(..., min_length=6)
+    role: SelfRegisterRole = Field(default=SelfRegisterRole.client)
 
 
 # ── Response schemas ─────────────────────────────────────────
