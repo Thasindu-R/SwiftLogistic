@@ -55,3 +55,16 @@ class DeliveryItem(Base):
     failure_reason = Column(String(200), nullable=True)
     notes = Column(Text, nullable=False, default="")
     delivered_at = Column(DateTime(timezone=True), nullable=True)
+
+
+# Lightweight read-only model for order lookup (shared DB)
+class _Order(Base):
+    __tablename__ = "orders"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(String(36))
+    client_id = Column(Integer)
+    assigned_driver_id = Column(Integer)
+    status = Column(String(20))
+    updated_at = Column(DateTime(timezone=True))

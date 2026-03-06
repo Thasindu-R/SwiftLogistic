@@ -25,6 +25,7 @@ from shared.contracts.order_schemas import (
 
 from .models import Order
 from .saga import OrderSaga
+from .auto_assign import auto_assign_driver
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
@@ -87,6 +88,13 @@ async def create_order(
             order_uuid,
             saga_result.get("state", "unknown"),
         )
+
+        # Auto-assign driver via ROS after saga completes
+        if saga_result.get("state") == "completed":
+            try:
+                await auto_assign_driver(order, db)
+            except Exception as assign_err:
+                logger.error("Auto-assign failed for %s: %s", order_uuid, assign_err)
     except Exception as e:
         logger.error("Saga failed to start for %s: %s", order_uuid, e)
 
@@ -198,6 +206,8 @@ async def update_order_status(
             {
                 "event": "tracking.update",
                 "order_id": order_id,
+                "client_id": order.client_id,
+                "driver_id": order.assigned_driver_id,
                 "event_type": f"status_{payload.status}",
                 "description": f"Order status changed to {payload.status}" + (f": {payload.reason}" if payload.reason else ""),
                 "location": "System",
@@ -226,6 +236,7 @@ async def assign_driver(
         raise HTTPException(status_code=404, detail="Order not found")
 
     order.assigned_driver_id = payload.driver_id
+    order.assignment_type = "manual"
     if order.status in ("pending", "processing", "confirmed"):
         order.status = "confirmed"
     order.updated_at = datetime.now(timezone.utc)
@@ -240,6 +251,8 @@ async def assign_driver(
             {
                 "event": "tracking.update",
                 "order_id": order_id,
+                "client_id": order.client_id,
+                "driver_id": payload.driver_id,
                 "event_type": "driver_assigned",
                 "description": f"Driver {payload.driver_id} assigned to order",
                 "location": "System",

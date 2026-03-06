@@ -128,7 +128,7 @@
         <!-- Login card -->
         <div class="auth-right">
           <div class="card auth-card">
-            <h2>Welcome back</h2>
+            <h2>Welcome Back</h2>
             <div class="auth-divider">Sign in to continue</div>
 
             <!-- Login Form -->
@@ -695,13 +695,7 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label>Pickup Address <span class="required">*</span></label>
-                  <input
-                    type="text"
-                    id="order-pickup"
-                    placeholder="123 Main St, Colombo 01"
-                    required
-                    minlength="5"
-                  />
+                  <input type="text" id="order-pickup" required minlength="5" />
                 </div>
                 <div class="form-group">
                   <label
@@ -710,7 +704,6 @@
                   <input
                     type="text"
                     id="order-delivery"
-                    placeholder="456 Oak Ave, Kandy"
                     required
                     minlength="5"
                   />
@@ -737,19 +730,14 @@
                 </div>
                 <div class="form-group">
                   <label>Recipient Name <span class="required">*</span></label>
-                  <input
-                    type="text"
-                    id="order-recipient"
-                    placeholder="John Doe"
-                    required
-                  />
+                  <input type="text" id="order-recipient" required />
                 </div>
                 <div class="form-group">
                   <label>Recipient Phone <span class="required">*</span></label>
                   <input
                     type="tel"
                     id="order-phone"
-                    placeholder="+94771234567"
+                    placeholder="+94XXXXXXXXX"
                     required
                     minlength="9"
                   />
@@ -798,30 +786,44 @@
                 placeholder="Enter Order ID (UUID)"
               />
               <button onclick="trackDelivery()" class="btn-primary">
-                Connect
+                Track
               </button>
             </div>
             <div id="td-ws-status" class="ws-badge disconnected">
               &#9679; Disconnected
             </div>
+
+            <!-- Staged Progress Bar -->
             <div
-              id="td-progress-wrap"
-              class="td-progress-wrap"
+              id="td-stage-progress"
+              class="td-stage-progress"
               style="display: none"
             >
-              <div class="td-progress-header">
-                <span id="td-progress-label">0%</span>
-              </div>
-              <div class="td-progress-track">
+              <div class="td-stage-track">
                 <div
-                  id="td-progress-bar"
-                  class="td-progress-bar"
+                  id="td-stage-fill"
+                  class="td-stage-fill"
                   style="width: 0%"
                 ></div>
               </div>
+              <div class="td-stage-labels">
+                <div class="td-stage-label" data-stage="1">
+                  <span class="td-stage-dot"></span>Order Placed
+                </div>
+                <div class="td-stage-label" data-stage="2">
+                  <span class="td-stage-dot"></span>At Warehouse
+                </div>
+                <div class="td-stage-label" data-stage="3">
+                  <span class="td-stage-dot"></span>Out for Delivery
+                </div>
+                <div class="td-stage-label" data-stage="4">
+                  <span class="td-stage-dot"></span>Delivered
+                </div>
+              </div>
             </div>
-            <div id="td-tracking-result"></div>
-            <div id="td-live-feed" class="td-live-feed"></div>
+
+            <!-- Visual Timeline -->
+            <div id="td-timeline" class="td-timeline"></div>
           </div>
 
           <!-- TRACKING: Any role -->
@@ -873,8 +875,7 @@
               </button>
             </div>
             <p class="muted" style="margin-bottom: 14px">
-              Deliveries assigned for today. Stop order optimised by the Route
-              Optimisation System (ROS).
+              Deliveries assigned for today.
             </p>
             <div id="manifest-stops-list"></div>
           </div>

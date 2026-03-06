@@ -53,6 +53,9 @@ const bootAuth = loadAuth();
 let token = bootAuth.token;
 let currentUser = bootAuth.user;
 let trackingWs = null;
+let _globalWs = null;
+let _globalWsPing = null;
+let currentTabId = null;
 let _debounceTimers = {};
 
 let _authStorage = bootAuth.storage;
@@ -327,6 +330,7 @@ function logout() {
     trackingWs.close();
     trackingWs = null;
   }
+  disconnectGlobalWs();
   const roleField = $("login-role");
   if (roleField) roleField.value = "Auto-detected after sign in";
 }
@@ -384,8 +388,122 @@ function showDashboard() {
   } catch {}
 
   renderNotifications();
+  connectGlobalWs();
 
   buildTabs();
+}
+
+/* ── Global WebSocket (real-time push for all tabs) ─────── */
+function connectGlobalWs() {
+  disconnectGlobalWs();
+  if (!token) return;
+  const wsUrl = `${WS_BASE}/api/tracking/ws/global/${token}`;
+  _globalWs = new WebSocket(wsUrl);
+
+  _globalWs.onopen = () => {
+    console.log("[GlobalWS] Connected");
+  };
+
+  _globalWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "pong") return;
+      handleGlobalWsEvent(data);
+    } catch (e) {
+      console.warn("[GlobalWS] Parse error", e);
+    }
+  };
+
+  _globalWs.onclose = () => {
+    console.log("[GlobalWS] Disconnected – reconnecting in 3s");
+    _globalWs = null;
+    setTimeout(() => {
+      if (token && currentUser) connectGlobalWs();
+    }, 3000);
+  };
+
+  _globalWs.onerror = () => {};
+
+  // Heartbeat
+  _globalWsPing = setInterval(() => {
+    if (_globalWs && _globalWs.readyState === WebSocket.OPEN)
+      _globalWs.send("ping");
+  }, 25000);
+}
+
+function disconnectGlobalWs() {
+  if (_globalWsPing) {
+    clearInterval(_globalWsPing);
+    _globalWsPing = null;
+  }
+  if (_globalWs) {
+    _globalWs.onclose = null;
+    _globalWs.close();
+    _globalWs = null;
+  }
+}
+
+function handleGlobalWsEvent(data) {
+  const eventType = data.event_type || "";
+  const orderId = data.order_id || "";
+  const desc = data.description || "";
+  const role = currentUser ? currentUser.role : "";
+
+  // For clients, only show customer-relevant events (skip backend operations)
+  const _clientEvents = [
+    "package_received",
+    "package_registered",
+    "driver_assigned",
+    "delivery_picked_up",
+    "delivery_in_transit",
+    "delivery_delivered",
+    "delivery_failed",
+    "status_in_transit",
+    "status_delivered",
+    "status_failed",
+  ];
+  if (role === "client" && !_clientEvents.includes(eventType)) {
+    // Still auto-refresh tabs silently, but no notification
+    if (currentTabId === "orders") loadClientOrders();
+    else if (currentTabId === "client-dashboard") loadClientDashboard();
+    return;
+  }
+
+  // 1. Push notification toast
+  pushNotification({
+    title: _prettyEventType(eventType),
+    message: desc + (orderId ? ` (${orderId.slice(0, 8)}…)` : ""),
+    type:
+      eventType.includes("fail") || eventType.includes("error")
+        ? "error"
+        : eventType.includes("deliver")
+          ? "success"
+          : "info",
+    timestamp: data.timestamp || new Date().toISOString(),
+  });
+  toast(_prettyEventType(eventType) + ": " + desc, "info", { duration: 4000 });
+
+  // 2. Auto-refresh the currently visible tab
+  if (role === "admin") {
+    if (currentTabId === "all-orders") loadAllOrders();
+    else if (currentTabId === "integration-log") loadIntegrationLog();
+    else if (currentTabId === "admin-dashboard") loadAdminDashboard();
+    else if (currentTabId === "manifests") loadAllManifests();
+  } else if (role === "client") {
+    if (currentTabId === "orders") loadClientOrders();
+    else if (currentTabId === "client-dashboard") loadClientDashboard();
+    // Track Delivery updates handled by per-order WS already
+  } else if (role === "driver") {
+    if (currentTabId === "my-manifest") loadMyManifest();
+    else if (currentTabId === "driver-dashboard") loadDriverDashboard();
+    else if (currentTabId === "update-delivery") loadUpdateDelivery();
+  }
+}
+
+function _prettyEventType(et) {
+  return (et || "update")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /* SVG icon fragments for sidebar nav */
@@ -485,6 +603,7 @@ function switchTab(tabId, btnEl, loadFn) {
   if (btnEl) btnEl.classList.add("active");
   if (loadFn) loadFn();
   currentTabLoad = loadFn;
+  currentTabId = tabId;
   /* Update page title in topbar */
   const titleEl = $("page-title");
   if (titleEl && btnEl) {
@@ -2170,30 +2289,58 @@ async function loadAllOrders(page) {
       : "";
     let qs = `?skip=${allOrdersPage * 20}&limit=20`;
     if (status) qs += `&status=${status}`;
-    const data = await api("GET", `/api/orders/${qs}`);
-    const orders = data.orders || [];
+    const [orderData, driverData] = await Promise.all([
+      api("GET", `/api/orders/${qs}`),
+      api("GET", "/api/auth/users?role=driver&limit=50"),
+    ]);
+    const orders = orderData.orders || [];
+    const drivers = driverData.users || [];
+    const driverMap = {};
+    drivers.forEach((d) => {
+      driverMap[d.id] = d.full_name || d.username;
+    });
+
     if (!orders.length) {
       $("all-orders-list").innerHTML =
         '<div class="no-data-message"><p>No orders found.</p></div>';
     } else {
       $("all-orders-list").innerHTML = `
         <table>
-          <thead><tr><th>Order ID</th><th>Client</th><th>Status</th><th>Created</th><th>Assigned Driver</th></tr></thead>
+          <thead><tr><th>Order ID</th><th>Client</th><th>Status</th><th>Created</th><th>Driver Assignment</th><th>Action</th></tr></thead>
           <tbody>${orders
-            .map(
-              (o) => `<tr>
+            .map((o) => {
+              const driverName = o.assigned_driver_id
+                ? driverMap[o.assigned_driver_id] ||
+                  `Driver #${o.assigned_driver_id}`
+                : null;
+              let assignCell;
+              if (o.assignment_type === "auto" && driverName) {
+                assignCell = `<span class="badge-auto-assign">🟢 Auto-assigned</span> → ${escapeHtml(driverName)}`;
+              } else if (o.assignment_type === "manual" && driverName) {
+                assignCell = `<span class="badge-manual-assign">🔵 Reassigned</span> → ${escapeHtml(driverName)}`;
+              } else if (driverName) {
+                assignCell = escapeHtml(driverName);
+              } else {
+                assignCell =
+                  '<span class="badge-pending-assign">⏳ Pending assignment</span>';
+              }
+              const actionBtn = o.assigned_driver_id
+                ? `<button class="btn-xs btn-outline" onclick="openAssignDriver('${o.order_id}')">Reassign</button>`
+                : `<button class="btn-xs btn-primary" onclick="openAssignDriver('${o.order_id}')">Assign</button>`;
+              return `<tr>
             <td class="mono">${shortId(o.order_id)}</td>
             <td>${escapeHtml(o.recipient_name || "—")}</td>
             <td><span class="badge ${o.status}">${o.status.replace(/_/g, " ")}</span></td>
             <td>${fmtDate(o.created_at)}</td>
-            <td>${o.assigned_driver || o.driver_id || "—"}</td>
-          </tr>`,
-            )
+            <td>${assignCell}</td>
+            <td>${actionBtn}</td>
+          </tr>`;
+            })
             .join("")}</tbody>
         </table>`;
     }
     // pagination
-    const total = data.total || orders.length;
+    const total = orderData.total || orders.length;
     const pages = Math.ceil(total / 20);
     let pag = "";
     for (let i = 0; i < pages && i < 10; i++) {
@@ -2457,7 +2604,7 @@ async function loadClientOrders() {
             <th>Recipient</th>
             <th>Status</th>
             <th>Date</th>
-            <th>Action</th>
+            <th style="text-align:center">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -2835,6 +2982,123 @@ function trackDeliveryById(orderId) {
   trackDelivery();
 }
 
+/* — Delivery‑stage helpers — */
+const DELIVERY_STAGES = [
+  {
+    key: "order_placed",
+    label: "Order Placed",
+    desc: "Your order was received and confirmed.",
+    icon: "✅",
+  },
+  {
+    key: "at_warehouse",
+    label: "Package at Warehouse",
+    desc: "Your package has been collected and is being prepared for dispatch.",
+    icon: "✅",
+  },
+  {
+    key: "out_for_delivery",
+    label: "Out for Delivery",
+    desc: "Your package is on the way with your driver.",
+    icon: "✅",
+  },
+  {
+    key: "delivered",
+    label: "Delivered",
+    desc: "Your package has been delivered successfully.",
+    icon: "✅",
+  },
+];
+
+function _eventToStageIdx(eventType) {
+  const s = String(eventType || "").toLowerCase();
+  if (s.includes("deliver") && !s.includes("out")) return 3;
+  if (s.includes("transit") || s.includes("picked") || s.includes("out"))
+    return 2;
+  if (s.includes("warehouse") || s.includes("process") || s.includes("confirm"))
+    return 1;
+  if (
+    s.includes("creat") ||
+    s.includes("pend") ||
+    s.includes("plac") ||
+    s.includes("receiv")
+  )
+    return 0;
+  return -1;
+}
+
+function _stagePercent(idx) {
+  return [25, 50, 75, 100][idx] || 0;
+}
+
+function _fmtStageTime(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  const today = new Date();
+  const isToday = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return isToday ? `Today, ${time}` : `${d.toLocaleDateString()}, ${time}`;
+}
+
+function _renderTimeline(reachedIdx, stageTimes) {
+  const timelineEl = $("td-timeline");
+  if (!timelineEl) return;
+  timelineEl.innerHTML = DELIVERY_STAGES.map((st, i) => {
+    const done = i <= reachedIdx;
+    const pending = i > reachedIdx;
+    const icon = done ? "✅" : "⏳";
+    const timeStr =
+      done && stageTimes[i]
+        ? _fmtStageTime(stageTimes[i])
+        : pending
+          ? "Pending"
+          : "";
+    const descText = done
+      ? st.desc
+      : i === reachedIdx + 1
+        ? _pendingDesc(i)
+        : _pendingDesc(i);
+    return `
+      <div class="td-tl-item ${done ? "done" : "pending"}">
+        <span class="td-tl-icon">${icon}</span>
+        <div class="td-tl-body">
+          <div class="td-tl-head">
+            <span class="td-tl-label">${st.label}</span>
+            <span class="td-tl-time">${timeStr}</span>
+          </div>
+          <p class="td-tl-desc">${done ? st.desc : _pendingDesc(i)}</p>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function _pendingDesc(idx) {
+  const descs = [
+    "Awaiting order confirmation.",
+    "Awaiting warehouse processing.",
+    "Awaiting dispatch.",
+    "Awaiting delivery confirmation.",
+  ];
+  return descs[idx] || "";
+}
+
+function _updateStageProgress(reachedIdx) {
+  const progressEl = $("td-stage-progress");
+  const fillEl = $("td-stage-fill");
+  if (!progressEl || !fillEl) return;
+  progressEl.style.display = "block";
+  const pct = reachedIdx >= 0 ? _stagePercent(reachedIdx) : 0;
+  fillEl.style.width = pct + "%";
+  // Mark stage dots
+  progressEl.querySelectorAll(".td-stage-label").forEach((el) => {
+    const stageNum = parseInt(el.dataset.stage, 10);
+    el.classList.toggle("reached", stageNum <= reachedIdx + 1);
+  });
+}
+
+let _tdReachedIdx = -1;
+let _tdStageTimes = [null, null, null, null];
+
 async function trackDelivery() {
   const orderId = $("td-order-id").value.trim();
   if (!orderId) {
@@ -2842,48 +3106,35 @@ async function trackDelivery() {
     return;
   }
 
-  const resultEl = $("td-tracking-result");
-  const progressWrap = $("td-progress-wrap");
-  const liveFeed = $("td-live-feed");
-
-  resultEl.innerHTML = '<p class="muted">Fetching tracking events…</p>';
-  liveFeed.innerHTML = "";
-  progressWrap.style.display = "none";
+  const timelineEl = $("td-timeline");
+  const progressEl = $("td-stage-progress");
+  timelineEl.innerHTML = '<p class="muted">Fetching tracking info…</p>';
+  progressEl.style.display = "none";
+  _tdReachedIdx = -1;
+  _tdStageTimes = [null, null, null, null];
 
   try {
     const data = await api("GET", `/api/tracking/${orderId}`);
     const events = data.events || [];
-    if (!events.length) {
-      resultEl.innerHTML =
-        "<p>No tracking events yet. The order is being processed.</p>";
-    } else {
-      resultEl.innerHTML = `<div class="timeline">${events
-        .map(
-          (e) => `
-        <div class="timeline-item">
-          <div class="time">${fmtDate(e.timestamp)}</div>
-          <div class="info">
-            <div class="event-type">${(e.event_type || "").replace(/_/g, " ")}</div>
-            <div class="event-desc">${e.description || ""}</div>
-            ${e.location ? `<div class="event-desc">📍 ${e.location}</div>` : ""}
-          </div>
-        </div>`,
-        )
-        .join("")}</div>`;
+
+    // Walk events to determine reached stage + timestamps
+    events.forEach((e) => {
+      const idx = _eventToStageIdx(e.event_type);
+      if (idx >= 0 && idx > _tdReachedIdx) _tdReachedIdx = idx;
+      if (idx >= 0 && !_tdStageTimes[idx]) _tdStageTimes[idx] = e.timestamp;
+    });
+    // Fill earlier stages if skipped
+    for (let i = _tdReachedIdx; i >= 0; i--) {
+      if (!_tdStageTimes[i] && i < _tdReachedIdx) {
+        _tdStageTimes[i] = _tdStageTimes[i + 1];
+      }
     }
 
-    // Show progress bar
-    const latestStatus = events.length
-      ? events[events.length - 1].event_type
-      : "pending";
-    const pct = statusToPct(latestStatus);
-    progressWrap.style.display = "block";
-    $("td-progress-bar").style.width = pct + "%";
-    $("td-progress-label").textContent = pct + "%";
-
+    _updateStageProgress(_tdReachedIdx);
+    _renderTimeline(_tdReachedIdx, _tdStageTimes);
     connectDeliveryWs(orderId);
   } catch (e) {
-    resultEl.innerHTML = `<p class="error">${e.message}</p>`;
+    timelineEl.innerHTML = `<p class="error">${e.message}</p>`;
   }
 }
 
@@ -2893,8 +3144,6 @@ function connectDeliveryWs(orderId) {
   _deliveryWs = new WebSocket(wsUrl);
 
   const statusEl = $("td-ws-status");
-  const liveFeed = $("td-live-feed");
-  const progressWrap = $("td-progress-wrap");
 
   _deliveryWs.onopen = () => {
     statusEl.className = "ws-badge connected";
@@ -2905,20 +3154,20 @@ function connectDeliveryWs(orderId) {
     const data = JSON.parse(event.data);
     if (data.type === "pong") return;
 
-    // Live feed entry
-    const div = document.createElement("div");
-    div.className = "td-feed-item";
-    const time = data.timestamp
-      ? new Date(data.timestamp).toLocaleTimeString()
-      : new Date().toLocaleTimeString();
-    div.innerHTML = `<span class="td-feed-time">${time}</span> <strong>${(data.event_type || "").replace(/_/g, " ")}</strong> — ${data.description || "Status update"}`;
-    liveFeed.prepend(div);
-
-    // Update progress bar
-    const pct = statusToPct(data.event_type || "");
-    progressWrap.style.display = "block";
-    $("td-progress-bar").style.width = pct + "%";
-    $("td-progress-label").textContent = pct + "%";
+    // Update stage timeline with new event
+    const idx = _eventToStageIdx(data.event_type || "");
+    if (idx >= 0 && idx > _tdReachedIdx) {
+      _tdReachedIdx = idx;
+      if (!_tdStageTimes[idx])
+        _tdStageTimes[idx] = data.timestamp || new Date().toISOString();
+      // Fill earlier stages if skipped
+      for (let i = _tdReachedIdx; i >= 0; i--) {
+        if (!_tdStageTimes[i] && i < _tdReachedIdx)
+          _tdStageTimes[i] = _tdStageTimes[i + 1];
+      }
+      _updateStageProgress(_tdReachedIdx);
+      _renderTimeline(_tdReachedIdx, _tdStageTimes);
+    }
 
     // Also update dashboard tracking card if same order
     if (_trackCardOrderId && data.order_id === _trackCardOrderId) {

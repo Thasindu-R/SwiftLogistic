@@ -70,6 +70,18 @@ class RouteResponse(BaseModel):
     status: str
 
 
+class DriverCandidate(BaseModel):
+    driver_id: int
+    name: str
+    current_load: int = 0  # number of active deliveries
+
+
+class AssignDriverRequest(BaseModel):
+    order_id: str
+    delivery_address: str
+    drivers: list[DriverCandidate]
+
+
 # ── Route optimisation logic (mock) ─────────────────────────
 def _compute_route(order_id: str, pickup: str, delivery: str) -> dict:
     """Generate a fake optimised route."""
@@ -196,6 +208,31 @@ async def get_route(route_id: str):
 @app.get("/api/v1/routes")
 async def list_routes():
     return list(routes_db.values())
+
+
+@app.post("/api/v1/drivers/assign")
+async def assign_best_driver(payload: AssignDriverRequest):
+    """ROS picks the best available driver based on current load and route efficiency."""
+    if not payload.drivers:
+        raise HTTPException(status_code=400, detail="No available drivers")
+
+    # Simulate intelligent assignment: prefer driver with lowest current load,
+    # break ties randomly (simulating route-proximity analysis)
+    sorted_drivers = sorted(payload.drivers, key=lambda d: (d.current_load, random.random()))
+    chosen = sorted_drivers[0]
+
+    logger.info(
+        "ROS assigned driver %d (%s) for order %s (load=%d, candidates=%d)",
+        chosen.driver_id, chosen.name, payload.order_id,
+        chosen.current_load, len(payload.drivers),
+    )
+    return {
+        "order_id": payload.order_id,
+        "assigned_driver_id": chosen.driver_id,
+        "assigned_driver_name": chosen.name,
+        "reason": f"Lowest workload ({chosen.current_load} active deliveries) among {len(payload.drivers)} candidates",
+        "delivery_address": payload.delivery_address,
+    }
 
 
 @app.get("/")

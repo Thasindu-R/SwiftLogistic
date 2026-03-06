@@ -1,17 +1,8 @@
-/*
- * SwiftTrack — Oceanic Command Dashboards
- * Theme  : Deep-sea navy · Electric cyan
- * Fonts  : Syne (display) · Plus Jakarta Sans (body)
- * Preserves all element IDs consumed by app.js
- */
-
 (function () {
   "use strict";
   const e = React.createElement;
 
-  /* ═══════════════════════════════════════════════
-     ICON PRIMITIVES
-  ═══════════════════════════════════════════════ */
+  /* ICON PRIMITIVES */
 
   function Svg({ size = 16, vb = "0 0 24 24", children, className }) {
     return e(

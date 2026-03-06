@@ -1,7 +1,6 @@
 """
 API Gateway – tracking route proxies + WebSocket passthrough.
-Forwards tracking requests to the tracking-service and provides
-a WebSocket bridge for real-time updates to the frontend.
+Forwards tracking requests to the tracking-service and provides a WebSocket bridge for real-time updates to the frontend.
 """
 
 import logging
@@ -96,6 +95,42 @@ async def retry_integration_event(event_id: int, request: Request):
 
 
 # ── WebSocket passthrough ────────────────────────────────────
+@router.websocket("/ws/global/{token}")
+async def websocket_global_proxy(websocket: WebSocket, token: str):
+    """Gateway WebSocket proxy for the global (user-level) channel."""
+    import asyncio
+    import websockets
+
+    await websocket.accept()
+    ws_url = TRACKING_URL.replace("http://", "ws://").replace("https://", "wss://")
+    ws_url = f"{ws_url}/api/tracking/ws/global/{token}"
+
+    try:
+        async with websockets.connect(ws_url) as backend_ws:
+            async def client_to_backend():
+                try:
+                    while True:
+                        data = await websocket.receive_text()
+                        await backend_ws.send(data)
+                except WebSocketDisconnect:
+                    pass
+
+            async def backend_to_client():
+                try:
+                    async for msg in backend_ws:
+                        await websocket.send_text(msg)
+                except Exception:
+                    pass
+
+            await asyncio.gather(client_to_backend(), backend_to_client())
+    except Exception as e:
+        logger.warning("Global WebSocket proxy error: %s", e)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
 @router.websocket("/ws/{order_id}")
 async def websocket_proxy(websocket: WebSocket, order_id: str):
     """

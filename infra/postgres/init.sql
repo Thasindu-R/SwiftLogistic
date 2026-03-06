@@ -1,10 +1,8 @@
--- ============================================================
+-- =============================================
 -- SwiftTrack – PostgreSQL schema initialisation
--- Executed automatically when the postgres container starts
--- for the first time (mounted as init script).
--- ============================================================
+-- =============================================
 
--- ── Users ───────────────────────────────────────────────────
+--  Users 
 CREATE TABLE IF NOT EXISTS users (
     id              SERIAL PRIMARY KEY,
     username        VARCHAR(50)  UNIQUE NOT NULL,
@@ -18,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- ── Orders ──────────────────────────────────────────────────
+--  Orders 
 CREATE TABLE IF NOT EXISTS orders (
     id                  SERIAL PRIMARY KEY,
     order_id            VARCHAR(36)  UNIQUE NOT NULL,  -- UUID
@@ -33,6 +31,7 @@ CREATE TABLE IF NOT EXISTS orders (
     recipient_name      VARCHAR(100) NOT NULL DEFAULT '',
     recipient_phone     VARCHAR(20)  NOT NULL DEFAULT '',
     estimated_cost      REAL,
+    assignment_type     VARCHAR(20),  -- 'auto' or 'manual'
     notes               TEXT         NOT NULL DEFAULT '',
     created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
@@ -42,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_client  ON orders(client_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status  ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_driver  ON orders(assigned_driver_id);
 
--- ── Tracking events ─────────────────────────────────────────
+--  Tracking events 
 CREATE TABLE IF NOT EXISTS tracking_events (
     id          SERIAL PRIMARY KEY,
     order_id    VARCHAR(36)  NOT NULL,
@@ -57,14 +56,14 @@ CREATE TABLE IF NOT EXISTS tracking_events (
 
 CREATE INDEX IF NOT EXISTS idx_tracking_order ON tracking_events(order_id);
 
--- ── Delivery manifests (driver daily routes) ────────────────
+-- ── Delivery manifests (driver daily routes) 
 CREATE TABLE IF NOT EXISTS delivery_manifests (
     id          SERIAL PRIMARY KEY,
     manifest_id VARCHAR(36)  UNIQUE NOT NULL,
     driver_id   INTEGER      NOT NULL REFERENCES users(id),
     date        DATE         NOT NULL,
     status      VARCHAR(20)  NOT NULL DEFAULT 'pending',
-    route_data  TEXT,  -- JSON blob from Route Optimisation System
+    route_data  TEXT,  -- JSON blob from ROS
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -129,47 +128,25 @@ VALUES (
     'admin'
 ) ON CONFLICT (username) DO NOTHING;
 
--- Seed driver
+-- Seed driver (password = "driver123")
 INSERT INTO users (username, email, password_hash, full_name, phone, role)
 VALUES (
-    'driver1',
-    'driver1@swiftlogistics.lk',
-    '$2b$12$FF8ix2UVatF/Rqijh8x7aeZPAww76plYihS6vUOY2x/Xu8Y4FLfa.',
+    'driver',
+    'driver@swiftlogistics.lk',
+    '$2b$12$26NNFThHLhyiuF3L50eKUeZde5TfTgXUG/f0gxsLGvm0wqn0qCog2',
     'Kamal Perera',
     '+94771111111',
     'driver'
 ) ON CONFLICT (username) DO NOTHING;
 
--- Seed second driver
+-- Seed client (password = "client123")
 INSERT INTO users (username, email, password_hash, full_name, phone, role)
 VALUES (
-    'driver2',
-    'driver2@swiftlogistics.lk',
-    '$2b$12$FF8ix2UVatF/Rqijh8x7aeZPAww76plYihS6vUOY2x/Xu8Y4FLfa.',
-    'Nimal Silva',
-    '+94773333333',
-    'driver'
-) ON CONFLICT (username) DO NOTHING;
-
--- Seed client
-INSERT INTO users (username, email, password_hash, full_name, phone, role)
-VALUES (
-    'client1',
-    'client1@example.com',
-    '$2b$12$FF8ix2UVatF/Rqijh8x7aeZPAww76plYihS6vUOY2x/Xu8Y4FLfa.',
+    'client',
+    'client@example.com',
+    '$2b$12$8RpkToBfIDFdjtDBJ9fo8eAERwPRFAlPxatX16UygxqAMUEdYFKy6',
     'ABC Online Store',
     '+94772222222',
-    'client'
-) ON CONFLICT (username) DO NOTHING;
-
--- Seed second client
-INSERT INTO users (username, email, password_hash, full_name, phone, role)
-VALUES (
-    'client2',
-    'client2@example.com',
-    '$2b$12$FF8ix2UVatF/Rqijh8x7aeZPAww76plYihS6vUOY2x/Xu8Y4FLfa.',
-    'XYZ Retail',
-    '+94774444444',
     'client'
 ) ON CONFLICT (username) DO NOTHING;
 

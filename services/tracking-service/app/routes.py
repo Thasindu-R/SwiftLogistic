@@ -25,7 +25,7 @@ from shared.contracts.tracking_schemas import (
     TrackingHistory,
 )
 
-from .models import DeliveryItem, DeliveryManifest, TrackingEvent
+from .models import DeliveryItem, DeliveryManifest, TrackingEvent, _Order
 from .websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
@@ -299,6 +299,22 @@ async def update_delivery_item(
 
     await db.flush()
 
+    # Lookup order for client_id routing
+    order_row = (await db.execute(
+        select(_Order.client_id, _Order.assigned_driver_id)
+        .where(_Order.order_id == order_id)
+    )).first()
+
+    # Sync order status for meaningful delivery status changes
+    _sync_statuses = {"delivered": "delivered", "failed": "failed", "in_transit": "in_transit", "picked_up": "in_transit"}
+    if payload.status in _sync_statuses and order_row:
+        await db.execute(
+            _Order.__table__.update()
+            .where(_Order.order_id == order_id)
+            .values(status=_sync_statuses[payload.status], updated_at=datetime.now(timezone.utc))
+        )
+        await db.flush()
+
     # Publish tracking event
     description = payload.failure_reason or f"Package marked as {payload.status}"
     if payload.status == "delivered" and payload.proof_of_delivery:
@@ -307,6 +323,7 @@ async def update_delivery_item(
     msg = {
         "event": "tracking.update",
         "order_id": order_id,
+        "client_id": order_row.client_id if order_row else None,
         "event_type": f"delivery_{payload.status}",
         "description": description,
         "location": "",
@@ -414,6 +431,36 @@ async def websocket_tracking(websocket: WebSocket, order_id: str):
                 await websocket.send_json({"type": "pong"})
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket, order_id)
+
+
+# ── Global WebSocket (user-level, all events) ────────────────
+@router.websocket("/ws/global/{token}")
+async def websocket_global(websocket: WebSocket, token: str):
+    """
+    Global WebSocket: authenticates via JWT token in the path,
+    then pushes all relevant events to this user in real-time.
+    """
+    from shared.common.security import decode_token
+    try:
+        payload = decode_token(token)
+    except Exception:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+
+    user_id = int(payload.get("sub", 0))
+    role = payload.get("role", "")
+    if not user_id:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+
+    await ws_manager.connect_global(websocket, user_id, role)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        ws_manager.disconnect_global(websocket)
 
 
 # ── Health ───────────────────────────────────────────────────

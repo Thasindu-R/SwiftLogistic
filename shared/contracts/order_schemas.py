@@ -35,6 +35,7 @@ class OrderResponse(BaseModel):
     order_id: str
     client_id: int
     assigned_driver_id: Optional[int] = None
+    assignment_type: Optional[str] = None
     status: str
     pickup_address: str
     delivery_address: str

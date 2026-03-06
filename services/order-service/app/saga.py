@@ -161,6 +161,7 @@ class OrderSaga:
                 message={
                     "event": "tracking.update",
                     "order_id": self.order_id,
+                    "client_id": self.order_data.get("client_id"),
                     "event_type": event_type,
                     "description": description,
                     "location": "Order Service (Saga)",

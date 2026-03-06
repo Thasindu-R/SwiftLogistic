@@ -447,6 +447,7 @@ h3 {
   letter-spacing: -0.03em;
   color: var(--text);
   margin-bottom: 4px;
+  text-align: center;
   position: relative;
 }
 
@@ -3311,7 +3312,10 @@ tbody tr:hover td {
 .order-row-actions {
   display: flex;
   gap: 6px;
-  justify-content: flex-end;
+  justify-content: center;
+}
+td.order-row-actions {
+  text-align: center;
 }
 
 /* Order success card (after submit) */
@@ -3342,50 +3346,130 @@ tbody tr:hover td {
 }
 
 /* Track Delivery tab */
-.td-progress-wrap {
-  margin-bottom: 18px;
+
+/* ── Staged Progress Bar ── */
+.td-stage-progress {
+  margin: 20px 0 28px;
 }
-.td-progress-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 6px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--accent);
-  font-family: var(--font-mono);
-}
-.td-progress-track {
+.td-stage-track {
   height: 8px;
   background: var(--bg-subtle);
   border-radius: var(--r-full);
   overflow: hidden;
   border: 1px solid var(--border);
+  position: relative;
 }
-.td-progress-bar {
+.td-stage-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--success));
   border-radius: var(--r-full);
-  transition: width 0.5s var(--ease-out);
+  transition: width 0.6s var(--ease-out);
   box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
-.td-live-feed {
-  margin-top: 14px;
+.td-stage-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
 }
-.td-feed-item {
-  padding: 10px 14px;
-  border-left: 3px solid var(--accent);
-  background: var(--surface-mid);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  margin-bottom: 8px;
-  font-size: 0.83rem;
-  color: var(--text-secondary);
-  animation: slideIn 0.2s var(--ease-out);
-}
-.td-feed-time {
+.td-stage-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+.td-stage-label.reached {
+  color: var(--success);
+}
+.td-stage-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  border: 2px solid var(--border);
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+.td-stage-label.reached .td-stage-dot {
+  background: var(--success);
+  border-color: var(--success);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+/* ── Visual Timeline ── */
+.td-timeline {
+  margin-top: 8px;
+}
+.td-tl-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  border-left: 2px solid var(--border);
+  margin-left: 12px;
+  padding-left: 20px;
+  position: relative;
+}
+.td-tl-item::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--surface);
+}
+.td-tl-item.done::before {
+  background: var(--success);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.45);
+}
+.td-tl-item.done {
+  border-left-color: var(--success);
+}
+.td-tl-item:last-child {
+  border-left-color: transparent;
+}
+.td-tl-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.td-tl-body {
+  flex: 1;
+}
+.td-tl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.td-tl-label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.td-tl-item.pending .td-tl-label {
+  color: var(--text-muted);
+}
+.td-tl-time {
+  font-size: 0.78rem;
   font-family: var(--font-mono);
-  margin-right: 8px;
+  color: var(--text-muted);
+}
+.td-tl-desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+.td-tl-item.pending .td-tl-desc {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* Responsive: Client stat cards */
@@ -3603,6 +3687,30 @@ tbody tr:hover td {
   white-space: nowrap;
   color: var(--danger);
   font-size: 0.82rem;
+}
+
+/* ── Driver Assignment Badges ── */
+.badge-auto-assign,
+.badge-manual-assign,
+.badge-pending-assign {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-auto-assign {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+}
+.badge-manual-assign {
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--accent);
+}
+.badge-pending-assign {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
 }
 
 .mini-map-pin.p1 {

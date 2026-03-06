@@ -265,6 +265,23 @@ class ROSClient:
             logger.warning("ROS health check failed: %s", e)
             return False
 
+    async def assign_best_driver(
+        self,
+        order_id: str,
+        delivery_address: str,
+        drivers: list[dict],
+    ) -> dict[str, Any]:
+        """Ask ROS to pick the best driver from candidates."""
+        request_data = {
+            "order_id": order_id,
+            "delivery_address": delivery_address,
+            "drivers": drivers,
+        }
+        logger.info("ROS: Requesting driver assignment for order %s (%d candidates)", order_id, len(drivers))
+        result = await self._request("POST", "/api/v1/drivers/assign", request_data)
+        logger.info("ROS: Assigned driver %s for order %s", result.get("assigned_driver_id"), order_id)
+        return result
+
 
 # ── Route Helper Functions ───────────────────────────────────
 
