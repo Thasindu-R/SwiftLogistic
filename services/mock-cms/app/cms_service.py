@@ -1,12 +1,5 @@
 """
 Mock Client Management System (CMS) – SOAP/XML API.
-
-Simulates the legacy on-premise CMS described in the SwiftLogistics scenario.
-Exposes SOAP-style endpoints that accept XML requests and return XML responses
-wrapped in SOAP envelopes.
-
-Also consumes order.created events from RabbitMQ and publishes
-cms.billing.confirmed / cms.billing.failed events.
 """
 
 import asyncio

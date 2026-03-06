@@ -1,9 +1,3 @@
-"""
-Async SQLAlchemy engine and session factory shared by all services.
-Each service imports `get_db` for dependency injection and `init_db`
-to create tables on startup.
-"""
-
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,

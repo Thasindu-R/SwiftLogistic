@@ -1,9 +1,5 @@
 """
 Mock Route Optimisation System (ROS) – RESTful JSON API.
-
-Simulates the cloud-based third-party ROS described in the scenario.
-Provides REST endpoints for route optimisation and also consumes
-order.created events from RabbitMQ to asynchronously compute routes.
 """
 
 import asyncio

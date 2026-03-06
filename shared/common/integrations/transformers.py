@@ -8,20 +8,6 @@ integration systems:
 - JSON ↔ XML: For CMS SOAP integration
 - TCP Messages ↔ JSON: For WMS proprietary protocol
 - Internal Model Normalization: Consistent data structure
-
-Maintains consistent internal data model across all transformations.
-
-Usage:
-    transformer = DataTransformer()
-    
-    # JSON to XML
-    xml_str = transformer.json_to_xml(order_dict, root_tag="Order")
-    
-    # XML to JSON
-    json_dict = transformer.xml_to_json(xml_string)
-    
-    # Normalize from different sources
-    normalized = transformer.normalize_order(external_data, source="cms")
 """
 
 import json

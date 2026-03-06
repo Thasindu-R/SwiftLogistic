@@ -7,25 +7,6 @@ Features:
 - Dead Letter Queue (DLQ) for failed messages
 - Message priority support
 - Persistent message delivery
-
-Usage:
-    queue_manager = QueueManager()
-    await queue_manager.connect()
-    
-    # Publish with retry support
-    await queue_manager.publish_with_retry(
-        exchange="swifttrack.orders",
-        routing_key="order.created",
-        message={"order_id": "...", ...},
-        max_retries=3
-    )
-    
-    # Consume with automatic DLQ routing
-    await queue_manager.consume_with_dlq(
-        queue="order.processing",
-        callback=process_order,
-        dlq_queue="order.processing.dlq"
-    )
 """
 
 import asyncio

@@ -1,11 +1,5 @@
 """
 WebSocket connection manager for real-time tracking updates.
-
-Two layers:
-  1. Per-order channels  – `/ws/{order_id}` (existing)
-  2. Global user channel – `/ws/global?token=…`  (new)
-     Subscribes clients to channels based on role/user-id so that
-     every relevant event is pushed automatically.
 """
 
 import json

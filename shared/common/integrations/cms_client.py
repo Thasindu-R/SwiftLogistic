@@ -9,11 +9,6 @@ SOAP Operations:
 - ValidateClient: Check if client exists and is active
 - GetClientInfo: Retrieve client details
 - CreateBilling: Create billing record for order
-
-Usage:
-    async with CMSClient("http://mock-cms:8004") as client:
-        result = await client.validate_client(client_id=1)
-        billing = await client.create_billing(order_data)
 """
 
 import logging

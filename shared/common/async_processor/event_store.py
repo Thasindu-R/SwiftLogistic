@@ -1,29 +1,5 @@
 """
 Event Store – Integration event logging and audit trail.
-
-Features:
-- Store all integration events in database
-- Maintain complete audit trail
-- Query events by order, system, status, time
-- Support for event replay and debugging
-
-Usage:
-    event_store = IntegrationEventStore(db_session)
-    
-    # Log an integration event
-    event = await event_store.log_event(
-        source="order-service",
-        target="cms",
-        event_type="client.validate",
-        order_id="ORD-001",
-        request_data={"client_id": 1},
-        status=EventStatus.SUCCESS,
-        response_data={"valid": True}
-    )
-    
-    # Query events
-    events = await event_store.get_events_by_order("ORD-001")
-    audit_trail = await event_store.get_audit_trail("ORD-001")
 """
 
 import json

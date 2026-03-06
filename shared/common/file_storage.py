@@ -1,35 +1,5 @@
 """
 File Storage Management
-=======================
-
-Secure file storage for proof-of-delivery images and documents:
-- Local filesystem storage with configurable path
-- Unique file naming with UUID
-- Image optimization and thumbnail generation
-- Metadata storage in database
-- Access control based on order ownership
-
-Features:
-- Secure file uploads
-- Image validation (type, size, dimensions)
-- Automatic thumbnail generation
-- File cleanup for orphaned files
-- Pre-signed URL generation (for cloud storage compatibility)
-
-Usage:
-    from shared.common.file_storage import file_storage
-    
-    # Upload proof-of-delivery image
-    result = await file_storage.upload_proof_of_delivery(
-        order_id="abc-123",
-        file_content=file_bytes,
-        filename="photo.jpg",
-        content_type="image/jpeg",
-        driver_id=5,
-    )
-    
-    # Get file URL
-    url = file_storage.get_file_url(result["file_id"])
 """
 
 import asyncio

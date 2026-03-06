@@ -1,10 +1,5 @@
 """
 Order Service – FastAPI application entry-point.
-Manages delivery orders, coordinates with external systems via RabbitMQ (Saga).
-Integrates full async processing & reliability on startup:
-  - QueueManager with DLQ support
-  - FailureRecoveryService for incomplete saga / DLQ recovery
-  - Integration event logging
 """
 
 import logging

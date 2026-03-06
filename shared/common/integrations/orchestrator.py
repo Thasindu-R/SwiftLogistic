@@ -10,16 +10,6 @@ Provides:
 - Retry logic with exponential backoff
 - Integration event logging
 - Error handling and compensation
-
-Usage:
-    orchestrator = IntegrationOrchestrator(
-        cms_url="http://mock-cms:8004",
-        ros_url="http://mock-ros:8005",
-        wms_host="mock-wms",
-        wms_port=9000
-    )
-    
-    result = await orchestrator.process_new_order(order_data)
 """
 
 import asyncio

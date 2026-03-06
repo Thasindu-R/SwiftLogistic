@@ -9,26 +9,6 @@ Advanced security features for SwiftLogistics API:
 - CORS configuration
 - Security headers
 - Request ID tracking
-
-Features:
-- Sliding window rate limiting
-- Configurable limits per endpoint
-- IP-based and user-based throttling
-- Automatic request logging to audit trail
-- Security headers (HSTS, CSP, etc.)
-
-Usage:
-    from shared.common.middleware import (
-        RateLimitMiddleware,
-        RequestLoggingMiddleware,
-        setup_security_middleware,
-    )
-    
-    # Setup all middleware
-    setup_security_middleware(app)
-    
-    # Or add individually
-    app.add_middleware(RateLimitMiddleware)
 """
 
 import asyncio

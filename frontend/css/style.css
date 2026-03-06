@@ -1,13 +1,8 @@
-/* ================================================================
-   SwiftTrack — Oceanic Command Design System
-   Theme   : Deep-sea navy · Electric cyan · Luminous data
-   Fonts   : Syne (display) + Plus Jakarta Sans (body) + JetBrains Mono
-   Layout  : Fullscreen centered auth · Navy sidebar · Cyan accent
-   ================================================================ */
+/*SwiftTrack - css*/
 
 @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
-/* ── Tokens ──────────────────────────────────────────────────── */
+/* Tokens */
 :root {
   --font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: "Syne", var(--font);

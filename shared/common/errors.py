@@ -1,35 +1,5 @@
 """
 Error Handling & Custom Exceptions
-==================================
-
-Provides centralized error handling for the SwiftLogistics middleware:
-- Custom exception classes for different error types
-- FastAPI exception handlers
-- Standardized error response format
-- Error logging and tracking
-
-Error Categories:
-- Validation errors (400)
-- Authentication errors (401)
-- Authorization errors (403)
-- Not found errors (404)
-- Conflict errors (409)
-- Integration errors (502/503)
-- Internal server errors (500)
-
-Usage:
-    from shared.common.errors import (
-        ValidationError,
-        NotFoundError,
-        register_exception_handlers,
-    )
-    
-    # Register handlers in FastAPI app
-    register_exception_handlers(app)
-    
-    # Raise custom exceptions
-    raise ValidationError("Invalid order data", field="pickup_address")
-    raise NotFoundError("Order", order_id)
 """
 
 import logging

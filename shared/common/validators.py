@@ -1,41 +1,11 @@
 """
 Input Validation Utilities
-==========================
 
 Comprehensive input validation for SwiftLogistics:
 - Field validators (email, phone, coordinates, etc.)
 - Business rule validators (order data, addresses)
 - Sanitization utilities
 - Custom Pydantic validators
-
-Features:
-- Prevent SQL injection and XSS
-- Validate geographic coordinates
-- Email and phone format validation
-- Order weight and dimension limits
-- Address validation
-- Status transition validation
-
-Usage:
-    from shared.common.validators import (
-        validate_email,
-        validate_phone,
-        validate_coordinates,
-        sanitize_string,
-        OrderValidator,
-    )
-    
-    # Single field validation
-    if validate_email(email):
-        # Valid
-    
-    # Using with Pydantic models
-    class OrderCreate(BaseModel):
-        email: str
-        
-        @validator('email')
-        def validate_email_field(cls, v):
-            return validate_email(v, raise_error=True)
 """
 
 import html

@@ -4,16 +4,6 @@ ROS Client – REST/JSON Integration
 
 Integrates with the Route Optimization System (ROS) via REST API.
 Sends order details and receives optimized routes in JSON format.
-
-Endpoints:
-- POST /api/v1/routes/optimise - Request route optimization
-- GET /api/v1/routes/{route_id} - Get existing route
-- GET /api/v1/routes - List all routes
-
-Usage:
-    async with ROSClient("http://mock-ros:8004") as client:
-        route = await client.optimise_route(order_data)
-        print(route["optimised_waypoints"])
 """
 
 import logging

@@ -6,18 +6,6 @@ Features:
 - Circuit breaker pattern for system protection
 - Move permanently failed messages to Dead Letter Queue
 - Retry state persistence for recovery
-
-Usage:
-    retry_handler = RetryHandler()
-    
-    result = await retry_handler.execute_with_retry(
-        operation=cms_client.validate_client,
-        args=(client_id,),
-        policy=RetryPolicy(max_attempts=3, base_delay=1.0)
-    )
-    
-    if result.status == RetryStatus.EXHAUSTED:
-        await retry_handler.send_to_dlq(result)
 """
 
 import asyncio

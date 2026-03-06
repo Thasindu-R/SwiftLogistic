@@ -6,18 +6,6 @@ Ensures order consistency across CMS, ROS, and WMS with:
 - Compensating transactions on failure
 - Status history tracking
 - Persistence for recovery
-
-Usage:
-    saga = SagaStateMachine(order_id="ORD-001", order_data={...})
-    
-    # Execute each step
-    await saga.execute_step("cms", cms_operation)
-    await saga.execute_step("wms", wms_operation)
-    await saga.execute_step("ros", ros_operation)
-    
-    # If any step fails, compensation runs automatically
-    if saga.state == SagaState.COMPENSATING:
-        await saga.complete_compensation()
 """
 
 import asyncio

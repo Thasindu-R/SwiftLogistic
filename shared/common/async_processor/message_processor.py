@@ -6,19 +6,6 @@ Features:
 - Coordinate with retry handler and event store
 - Handle message acknowledgment
 - Support for batch processing
-
-Usage:
-    processor = AsyncMessageProcessor(queue_manager, event_store)
-    
-    # Register handlers
-    processor.register_handler("order.created", handle_order_created)
-    processor.register_handler("cms.billing.confirmed", handle_cms_response)
-    
-    # Start processing
-    await processor.start()
-    
-    # Stop gracefully
-    await processor.stop()
 """
 
 import asyncio

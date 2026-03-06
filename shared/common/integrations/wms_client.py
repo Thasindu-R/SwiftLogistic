@@ -4,26 +4,6 @@ WMS Client – TCP/IP Integration
 
 Integrates with the Warehouse Management System (WMS) via TCP/IP protocol.
 Uses proprietary JSON-over-TCP protocol with newline-delimited messages.
-
-Protocol Format:
-- Request:  {"command": "COMMAND_NAME", "order_id": "...", ...}\n
-- Response: {"status": "OK/ERROR", "event": "EVENT_NAME", ...}\n
-
-Commands:
-- RECEIVE_PACKAGE: Register package arrival at warehouse
-- CHECK_STATUS: Check current package status
-- LOAD_VEHICLE: Mark package as loaded onto vehicle
-
-Events:
-- PACKAGE_RECEIVED: Package arrived at warehouse
-- PACKAGE_READY: Package processed and ready
-- PACKAGE_LOADED: Package loaded onto delivery vehicle
-- STATUS: Current package status response
-
-Usage:
-    async with WMSClient("mock-wms", 9000) as client:
-        result = await client.receive_package(order_id, weight, description)
-        status = await client.check_status(order_id)
 """
 
 import asyncio

@@ -1,20 +1,5 @@
 """
 Mock Warehouse Management System (WMS) – Proprietary TCP/IP messaging.
-
-Simulates the WMS described in the SwiftLogistics scenario.
-Runs TWO servers simultaneously:
-  1. A raw TCP socket server on port 9000 for proprietary messaging.
-  2. A lightweight FastAPI HTTP server on port 8006 for health checks.
-
-Also consumes order.created events from RabbitMQ and publishes
-wms.package.* tracking events.
-
-TCP Protocol (JSON-over-TCP, newline-delimited):
-  → Client sends:  {"command": "RECEIVE_PACKAGE", "order_id": "...", ...}\n
-  ← Server replies: {"status": "OK", "event": "PACKAGE_RECEIVED", ...}\n
-
-  Commands: RECEIVE_PACKAGE, CHECK_STATUS, LOAD_VEHICLE
-  Events:   PACKAGE_RECEIVED, PACKAGE_READY, PACKAGE_LOADED
 """
 
 import asyncio

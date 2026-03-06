@@ -1,10 +1,5 @@
 """
 Admin Dashboard Service – Aggregates system-wide metrics and status.
-
-Provides comprehensive administrative oversight for SwiftLogistics including:
-- Dashboard Overview (orders, deliveries, failed deliveries, system status)
-- Integration Status Monitoring (CMS/ROS/WMS connectivity)
-- Real-time metrics and alerts
 """
 
 import logging

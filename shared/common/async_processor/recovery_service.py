@@ -7,18 +7,6 @@ Features:
 - Ensure no order is lost
 - Automatic recovery on startup
 - Manual recovery triggers
-
-Usage:
-    recovery_service = FailureRecoveryService(db_session, queue_manager)
-    
-    # Run recovery on startup
-    status = await recovery_service.run_full_recovery()
-    
-    # Recover specific order
-    await recovery_service.recover_order("ORD-001")
-    
-    # Process DLQ messages
-    await recovery_service.process_dlq("order.processing.dlq", max_messages=10)
 """
 
 import asyncio

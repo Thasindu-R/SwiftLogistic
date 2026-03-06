@@ -1,36 +1,5 @@
 """
 WebSocket Manager – Real-Time Communication
-============================================
-
-Provides WebSocket connection management for live updates:
-- Order status changes
-- Tracking updates (driver location, delivery progress)
-- System notifications
-- Integration status alerts
-
-Features:
-- Connection pooling by user/order
-- Broadcast to specific channels
-- Heartbeat/ping-pong for connection health
-- Automatic reconnection handling
-- Message queuing for offline clients
-
-Usage:
-    from shared.common.websocket import ws_manager
-    
-    # In FastAPI route
-    @app.websocket("/ws/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, client_id: str):
-        await ws_manager.connect(websocket, client_id)
-        try:
-            while True:
-                data = await websocket.receive_text()
-                await ws_manager.handle_message(client_id, data)
-        except WebSocketDisconnect:
-            ws_manager.disconnect(client_id)
-    
-    # Broadcast update
-    await ws_manager.broadcast_order_update(order_id, status_data)
 """
 
 import asyncio

@@ -1,7 +1,6 @@
 """
 API Gateway – FastAPI application entry-point.
-Single entry-point for the SwiftTrack platform.  All requests from the frontend (Client Portal / Driver App) arrive here and are routed to the appropriate internal microservice: auth-service, order-service, or tracking-service.
-Also exposes a WebSocket endpoint for real-time tracking.
+Single entry-point for the SwiftTrack platform.
 """
 
 import logging

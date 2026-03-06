@@ -1,6 +1,5 @@
 """
 Integration event logger – records all middleware interactions
-(CMS/ROS/WMS calls) for audit, monitoring, and retry support.
 """
 
 import json
